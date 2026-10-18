@@ -1,9 +1,10 @@
 flowchart TD
   A["1 · Première connexion<br/>mot de passe de l'installation"]:::admin
   B["2 · Choisir son mot de passe"]:::admin
-  C["3 · Compléter son profil<br/>nom, prénom, téléphone"]:::admin
+  C["3 · Compléter son profil<br/>civilité, nom, prénom, téléphone"]:::admin
   S1["Le SG organise l'année<br/>classes, matières, élèves"]:::autre
   S2["Le SG prend une décision"]:::autre
+  S3["Le SG crée les comptes<br/>des enseignants"]:::autre
   D["4 · Décisions prises<br/>consulter le journal"]:::orga
   E["5 · Désapprouver<br/>dans les 4 semaines"]:::orga
   N["Le SG est notifié,<br/>l'action est défaite"]:::autre
@@ -12,6 +13,9 @@ flowchart TD
   P["Les professeurs saisissent<br/>les notes de la séquence"]:::autre
   H["8 · Bulletins, statistiques<br/>et classement"]:::eval
   I["Cartes scolaires<br/>élèves avec photo"]:::scol
+  J["9 · Moyenne minimale<br/>du tableau d'honneur"]:::admin
+  K["10 · Tableau d'honneur<br/>liste et certificats"]:::eval
+  L["11 · Attestation de présence<br/>carrière complétée"]:::orga
   A --> B --> C
   C --> D
   S2 --> D
@@ -19,6 +23,10 @@ flowchart TD
   S1 --> F --> G
   S1 --> P --> H
   S1 --> I
+  P --> K
+  J --> K
+  C --> L
+  S3 --> L
   classDef admin fill:#e4effa,stroke:#1d5fa8,color:#14202e
   classDef orga fill:#e8f5ee,stroke:#007a5e,color:#14202e
   classDef scol fill:#fff7e0,stroke:#b8860b,color:#14202e

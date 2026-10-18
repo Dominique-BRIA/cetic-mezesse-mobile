@@ -5,9 +5,10 @@ flowchart LR
   CLASSE["<b>CLASSE</b><hr/><u>id_classe</u><br/>nom, nom anglais<br/>niveau<br/>spécialité"]
   GROUPE["<b>GROUPE DE MATIÈRES</b><hr/><u>id_groupe</u><br/>nom, nom anglais<br/>ordre"]
   MAT["<b>MATIÈRE</b><hr/><u>id_matiere</u><br/>nom, nom anglais<br/>coefficient<br/>ordre"]
-  UTIL["<b>UTILISATEUR</b><hr/><u>id_utilisateur</u><br/>nom, prénom<br/>téléphone, e-mail<br/>mot de passe, rôle<br/>actif"]
+  UTIL["<b>UTILISATEUR</b><hr/><u>id_utilisateur</u><br/>nom, prénom, sexe<br/>téléphone, e-mail<br/>mot de passe, rôle<br/>actif<br/>matricule, grade, fonction<br/>prise de service"]
   ELEVE["<b>ÉLÈVE</b><hr/><u>id_eleve</u><br/>matricule, matricule national<br/>nom, prénoms, sexe<br/>date et lieu de naissance<br/>photo, parent"]
   INS["<b>INSCRIPTION</b><hr/><u>id_inscription</u><br/>redoublant<br/>statut"]
+  ATT["<b>ATTESTATION</b><hr/><u>id_attestation</u><br/>numéro, référence<br/>année, grade, fonction<br/>délivrée le"]
   RENV["<b>RENVOI</b><hr/><u>id_renvoi</u><br/>date, motif<br/>date de réintégration<br/>motif de réintégration"]
 
   a1(["COMPTER"])
@@ -24,6 +25,8 @@ flowchart LR
   a12(["VISER<hr/>compétence"])
   a13(["CONCERNER"])
   a14(["DÉCIDER"])
+  a15(["BÉNÉFICIER"])
+  a16(["DÉLIVRER"])
 
   ANNEE ---|"1,n"| a1 ---|"1,1"| SEQ
   ANNEE ---|"0,n"| a2 ---|"1,1"| CLASSE
@@ -41,8 +44,10 @@ flowchart LR
   MAT ---|"0,n"| a12 ---|"0,n"| SEQ
   INS ---|"0,n"| a13 ---|"1,1"| RENV
   UTIL ---|"0,n"| a14 ---|"1,1"| RENV
+  UTIL ---|"0,n"| a15 ---|"1,1"| ATT
+  UTIL ---|"0,n"| a16 ---|"1,1"| ATT
 
   classDef entite fill:#eef4fb,stroke:#1d5fa8,color:#14202e
   classDef asso fill:#ffffff,stroke:#5b6b7d,color:#14202e
-  class ANNEE,SEQ,CLASSE,GROUPE,MAT,UTIL,ELEVE,INS,RENV entite
-  class a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14 asso
+  class ANNEE,SEQ,CLASSE,GROUPE,MAT,UTIL,ELEVE,INS,RENV,ATT entite
+  class a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16 asso

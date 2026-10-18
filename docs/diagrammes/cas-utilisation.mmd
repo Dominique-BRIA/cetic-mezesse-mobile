@@ -23,21 +23,25 @@ flowchart TB
     s6(["Consulter notes, statistiques et classement"])
     s7(["Gérer années scolaires et réinscriptions"])
     s8(["Paramétrer établissement et barèmes"])
-    SG --- s1 & s2 & s3 & s4 & s5 & s6 & s7 & s8
+    s9(["Imprimer le tableau d'honneur"])
+    SG --- s1 & s2 & s3 & s4 & s5 & s6 & s7 & s8 & s9
   end
-  subgraph BPV["Proviseur"]
+  subgraph BPV["Directeur"]
     direction LR
-    PV["« acteur »<br/><b>Proviseur</b>"]
+    PV["« acteur »<br/><b>Directeur</b>"]
     v1(["Consulter toutes les listes"])
     v2(["Consulter statistiques et classement"])
     v3(["Créer un élève"])
     v4(["Renvoyer un élève"])
     v5(["Réintégrer un élève"])
     v6(["Générer bulletins et listes"])
-    PV --- v1 & v2 & v3 & v4 & v5 & v6
+    v7(["Désapprouver une décision du SG"])
+    v8(["Délivrer une attestation de présence"])
+    v9(["Régler et imprimer le tableau d'honneur"])
+    PV --- v1 & v2 & v3 & v4 & v5 & v6 & v7 & v8 & v9
   end
   BPR ~~~ BSG ~~~ BPV
   classDef acteur fill:#eef4fb,stroke:#1d5fa8,color:#14202e
   classDef cas fill:#ffffff,stroke:#5b6b7d,color:#14202e
   class PR,SG,PV acteur
-  class p1,p2,p3,p4,p5,s1,s2,s3,s4,s5,s6,s7,s8,v1,v2,v3,v4,v5,v6 cas
+  class p1,p2,p3,p4,p5,s1,s2,s3,s4,s5,s6,s7,s8,s9,v1,v2,v3,v4,v5,v6,v7,v8,v9 cas

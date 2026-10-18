@@ -1,13 +1,13 @@
 flowchart LR
   subgraph Clients
-    NAV["Navigateur<br/>(Proviseur, SG, professeurs)"]
+    NAV["Navigateur<br/>(Directeur, SG, professeurs)"]
     TEL["Téléphone Android<br/>application Flutter"]
   end
   subgraph Vercel
-    WEB["Client web React<br/>(fichiers statiques)"]
+    WEB["Client web Next.js<br/>(React)"]
   end
   subgraph Azure["Azure App Service"]
-    API["API Node.js / Express<br/>calculs, PDF, Excel"]
+    API["API Spring Boot (Java 21)<br/>calculs, PDF, Excel"]
   end
   subgraph Neon
     BD[("PostgreSQL")]
@@ -16,11 +16,13 @@ flowchart LR
     S3[("Photos des élèves")]
   end
   subgraph GitHub
-    GH["Dépôt du code"] --> GA["GitHub Actions<br/>construction de l'APK"]
+    GH["Dépôts du code<br/>backend, web, mobile"] --> GA["GitHub Actions<br/>tests, jar, APK"]
   end
   NAV -- HTTPS --> WEB
   NAV -- "HTTPS, JSON, jeton JWT" --> API
   TEL -- "HTTPS, JSON, jeton JWT" --> API
-  API -- Prisma --> BD
+  API -- "JPA / Hibernate, Flyway" --> BD
   API -- "API S3" --> S3
   GA -. APK .-> TEL
+  GA -. "jar" .-> API
+  GH -. "déploiement" .-> WEB

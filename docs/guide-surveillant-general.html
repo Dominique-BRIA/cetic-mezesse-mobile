@@ -37,7 +37,7 @@
     <div class="carte"><b>Bleu : administration.</b> Paramètres, année scolaire, séquences.</div>
     <div class="carte"><b>Vert : organisation.</b> Spécialités, classes, groupes, enseignants, matières.</div>
     <div class="carte"><b>Jaune : scolarité.</b> Élèves, photos, cartes scolaires.</div>
-    <div class="carte"><b>Violet : évaluations.</b> Bulletins, statistiques, classement.</div>
+    <div class="carte"><b>Violet : évaluations.</b> Bulletins, statistiques, classement, tableau d'honneur.</div>
   </div>
 </section>
 
@@ -53,13 +53,13 @@
   <div class="etape"><div class="num">0</div><div><b>Connectez-vous</b> avec le numéro de téléphone du compte SG et le mot de passe remis à l'installation. Ouvrez aussitôt <b>Mon profil</b> (votre nom, en bas du menu) pour mettre vos vrais nom et prénom, puis <b>Changer mon mot de passe</b>.</div></div>
 
   <h3>Administration</h3>
-  <div class="etape"><div class="num">1</div><div><b>Paramètres</b> (menu Administration). Vérifiez le nom de l'établissement en français et en anglais, la région, le département, le code et le préfixe des matricules : ils s'impriment sur les bulletins, les listes et les cartes scolaires. Vérifiez aussi les barèmes des grades et des cotes.</div></div>
+  <div class="etape"><div class="num">1</div><div><b>Paramètres</b> (menu Administration). Vérifiez le nom de l'établissement en français et en anglais (« Government Technical College of Mezesse »), le sigle anglais (« GTC »), la région, le département, l'arrondissement, le téléphone, le code et le préfixe des matricules : ils s'impriment en tête des bulletins, des listes, des cartes scolaires et des attestations. Vérifiez aussi les barèmes des grades et des cotes, et la moyenne minimale du tableau d'honneur (12,00 par défaut).</div></div>
   <div class="etape"><div class="num">2</div><div><b>Années et séquences.</b> L'année en cours est créée à l'installation. Pour une nouvelle année, cliquez <b>Nouvelle année</b> : vous pouvez reprendre l'organisation d'une année précédente (groupes, classes, matières, professeurs), ce qui évite les étapes 4 à 7.</div></div>
 
   <h3>Organisation</h3>
   <div class="etape"><div class="num">3</div><div><b>Spécialités</b> (page Classes, bouton <b>Spécialités</b>). Créez les spécialités enseignées : Mécanique, Électricité… Elles servent d'une année sur l'autre.</div></div>
   <div class="etape"><div class="num">4</div><div><b>Classes.</b> Choisissez le niveau et la spécialité : le nom se calcule tout seul. Créez autant de classes que de divisions ; si un niveau et une spécialité comptent plusieurs classes, l'application ajoute les lettres A, B… Choisissez le professeur principal quand son compte existe (étape 5).</div></div>
-  <div class="etape"><div class="num">5</div><div><b>Enseignants.</b> Créez un compte par professeur, avec son téléphone ou son e-mail. Le mot de passe provisoire est <code>password</code> ; le professeur le change à sa première connexion.</div></div>
+  <div class="etape"><div class="num">5</div><div><b>Enseignants.</b> Créez un compte par professeur, avec son téléphone ou son e-mail. Le mot de passe provisoire est <code>password</code> ; le professeur le change à sa première connexion. Remplissez aussi sa <b>carrière</b> (matricule, grade, fonction, date de prise de service) : le Directeur en aura besoin pour lui délivrer une attestation de présence.</div></div>
   <div class="etape"><div class="num">6</div><div><b>Groupes de matières</b> (matières générales, professionnelles, complémentaires…). Chaque groupe est rattaché aux classes qui l'utilisent ; il faut donc que les classes existent.</div></div>
   <div class="etape"><div class="num">7</div><div><b>Matières.</b> Pour chaque classe : nom, coefficient, groupe (rattaché à cette classe) et professeur. Sans professeur attribué, personne ne peut saisir les notes de la matière.</div></div>
 
@@ -70,7 +70,7 @@
   <h3>Pendant l'année</h3>
   <div class="etape"><div class="num">10</div><div><b>Ouvrir la séquence</b> (Années et séquences). Les professeurs concernés reçoivent une notification et peuvent saisir leurs notes.</div></div>
   <div class="etape"><div class="num">11</div><div><b>Fermer la séquence</b> quand la saisie est terminée. Suivez l'avancement dans <b>Notes</b> et sur le tableau de bord ; une séquence fermée peut être rouverte.</div></div>
-  <div class="etape"><div class="num">12</div><div><b>Bulletins, statistiques et classement</b> (menu Évaluations). Les <b>cartes scolaires</b> (menu Scolarité) s'impriment dès que les élèves ont une photo.</div></div>
+  <div class="etape"><div class="num">12</div><div><b>Bulletins, statistiques, classement et tableau d'honneur</b> (menu Évaluations). Les certificats du tableau d'honneur portent le nom du professeur principal de la classe. Les <b>cartes scolaires</b> (menu Scolarité) s'impriment dès que les élèves ont une photo.</div></div>
 </section>
 
 <section class="chapitre">
@@ -87,6 +87,7 @@
     <tr><td>Imprimer une carte scolaire</td><td>La photo de l'élève ; les informations de l'établissement</td><td>Cartes scolaires</td></tr>
     <tr><td>Permettre la saisie des notes</td><td>Matière attribuée, élèves inscrits, séquence ouverte</td><td>Années et séquences</td></tr>
     <tr><td>Éditer les bulletins</td><td>Des notes saisies ; les barèmes</td><td>Bulletins</td></tr>
+    <tr><td>Imprimer les certificats du tableau d'honneur</td><td>Des notes saisies ; la moyenne minimale ; le professeur principal de chaque classe</td><td>Tableau d'honneur</td></tr>
     <tr><td>Réinscrire des élèves</td><td>La nouvelle année et ses classes</td><td>Réinscriptions</td></tr>
   </table>
 
@@ -99,7 +100,7 @@
     <tr><td>Une matière notée</td><td>Vous confirmez : ses notes sont effacées avec elle</td></tr>
   </table>
 
-  <div class="encadre"><b>Vos décisions sont suivies par le Proviseur.</b> Chaque action d'organisation, de scolarité ou d'administration est consignée dans le journal « Décisions prises ». Elle est approuvée d'office ; le Proviseur peut la désapprouver pendant 4 semaines, ce qui la défait. Vous en êtes prévenu par une notification (la cloche en haut du menu).</div>
+  <div class="encadre"><b>Vos décisions sont suivies par le Directeur.</b> Chaque action d'organisation, de scolarité ou d'administration est consignée dans le journal « Décisions prises ». Elle est approuvée d'office ; le Directeur peut la désapprouver pendant 4 semaines, ce qui la défait. Vous en êtes prévenu par une notification (la cloche en haut du menu).</div>
 </section>
 
 </body>

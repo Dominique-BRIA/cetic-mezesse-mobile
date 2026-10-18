@@ -24,7 +24,7 @@
       <tr><td style="width:40%"><b>Établissement</b></td><td>Collège d'Enseignement Technique Industriel et Commercial de Mezesse</td></tr>
       <tr><td><b>Adresse de l'application</b></td><td>https://ceticmezesse.vercel.app (web) · application Android</td></tr>
       <tr><td><b>Pour commencer</b></td><td>Guide de première utilisation du Surveillant Général</td></tr>
-      <tr><td><b>Version du document</b></td><td>2.0 · Octobre 2026</td></tr>
+      <tr><td><b>Version du document</b></td><td>2.1 · Octobre 2026</td></tr>
     </table>
   </div>
 </section>
@@ -34,7 +34,7 @@
   <ol>
     <li><span>1. Se connecter et se repérer</span></li>
     <li><span>2. Mon profil, mon mot de passe, les notifications</span></li>
-    <li><span>3. Paramètres de l'établissement et barèmes</span></li>
+    <li><span>3. Paramètres de l'établissement, barèmes et tableau d'honneur</span></li>
     <li><span>4. Années scolaires et séquences</span></li>
     <li><span>5. Spécialités et classes</span></li>
     <li><span>6. Groupes de matières</span></li>
@@ -44,12 +44,12 @@
     <li><span>10. Réinscriptions</span></li>
     <li><span>11. Notes</span></li>
     <li><span>12. Bulletins et cartes scolaires</span></li>
-    <li><span>13. Statistiques et classement</span></li>
-    <li><span>14. Vos décisions et le Proviseur</span></li>
+    <li><span>13. Statistiques, classement et tableau d'honneur</span></li>
+    <li><span>14. Vos décisions et le Directeur</span></li>
     <li><span>15. L'application mobile et questions fréquentes</span></li>
   </ol>
   <div class="encadre">
-    <b>Votre rôle.</b> Vous organisez l'année : établissement, années et séquences, spécialités, classes, groupes, matières, comptes des enseignants, élèves. Vous éditez les bulletins, les listes et les cartes scolaires, et vous consultez toutes les notes et statistiques. Pour l'ordre de mise en place, suivez le <b>Guide de première utilisation</b>.
+    <b>Votre rôle.</b> Vous organisez l'année : établissement, années et séquences, spécialités, classes, groupes, matières, comptes des enseignants, élèves. Vous éditez les bulletins, les listes, les cartes scolaires et le tableau d'honneur, et vous consultez toutes les notes et statistiques. Le chef d'établissement est le <b>Directeur</b>, ou la <b>Directrice</b>. Pour l'ordre de mise en place, suivez le <b>Guide de première utilisation</b>.
   </div>
 </section>
 
@@ -69,15 +69,17 @@
   <h2>2. Mon profil, mon mot de passe, les notifications</h2>
   <p>Touchez votre nom en bas du menu pour corriger votre prénom, votre nom, votre téléphone ou votre e-mail. Changer de téléphone ou d'e-mail demande votre mot de passe, car ils servent à vous connecter. Le bouton <b>Changer mon mot de passe</b> y est relié.</p>
   <figure><img src="img/manuel/profil.png" alt=""><figcaption>Figure 2 — Mon profil (ici, celui d'un professeur)</figcaption></figure>
-  <p>Vous recevez une notification quand le Proviseur <b>désapprouve</b> une de vos décisions, avec son motif et ce qui a été défait (voir le chapitre 14).</p>
+  <p>Vous recevez une notification quand le Directeur <b>désapprouve</b> une de vos décisions, avec son motif et ce qui a été défait (voir le chapitre 14).</p>
   <figure><img src="img/manuel/sg-notifications.png" alt=""><figcaption>Figure 3 — Notification d'une décision désapprouvée</figcaption></figure>
 </section>
 
 <section class="chapitre">
-  <h2>3. Paramètres de l'établissement et barèmes</h2>
-  <p>Menu Administration → <b>Paramètres</b>. Les informations de l'établissement s'impriment sur les bulletins, les listes et les cartes scolaires : nom en français et en anglais, sigle, région, département, arrondissement, localité, code, boîte postale, téléphone. Le <b>préfixe des matricules</b> sert à générer les matricules des élèves (par exemple <code>CTM26-0007</code>).</p>
+  <h2>3. Paramètres de l'établissement, barèmes et tableau d'honneur</h2>
+  <p>Menu Administration → <b>Paramètres</b>. Les informations de l'établissement s'impriment en tête des bulletins, des listes, des cartes scolaires, des attestations et des certificats : nom en français et en anglais, sigle et <b>sigle anglais</b>, région, département, arrondissement, localité, code, boîte postale, téléphone. Le <b>préfixe des matricules</b> sert à générer les matricules des élèves (par exemple <code>CTM26-0007</code>).</p>
   <figure><img src="img/manuel/sg-parametres.png" alt=""><figcaption>Figure 4 — Paramètres</figcaption></figure>
+  <div class="encadre">Pour le CETIC : nom anglais « Government Technical College of Mezesse », sigle anglais « GTC », arrondissement « Sangmélima », téléphone « 693835397 ». L'en-tête des documents affiche alors « CETIC DE MEZESSE » à gauche et « GTC MEZESSE » à droite.</div>
   <p>Les <b>barèmes</b> donnent le grade d'une matière (A, B+…) et la cote de la moyenne générale (CTBA, CBA…). Chaque mention a une borne basse incluse ; un barème commence toujours à 0.</p>
+  <p>La carte <b>Tableau d'honneur</b> fixe la <b>moyenne minimale</b> à atteindre pour y figurer : 12,00 par défaut. Le Directeur peut aussi la changer ; les autres paramètres ne sont modifiables que par vous.</p>
 </section>
 
 <section class="chapitre">
@@ -114,35 +116,38 @@
     <li><b>Réinitialiser le mot de passe</b> d'un professeur qui l'a oublié : il redevient <code>password</code>.</li>
     <li><b>Désactiver</b> un compte : la personne perd l'accès immédiatement ; ses notes restent.</li>
   </ul>
+  <h3>La carrière</h3>
+  <p>Dans la fenêtre de l'enseignant, la section <b>Carrière</b> recueille ce qu'imprime l'attestation de présence effective au poste délivrée par le Directeur : civilité, matricule de la fonction publique, grade ou corps (PLEG, PCEG, PLET…), fonction, date de prise de service au CETIC, date d'entrée dans la fonction publique et acte de nomination ou d'affectation. Tout est facultatif ici, mais le matricule, le grade, la fonction et la date de prise de service seront demandés au moment de l'attestation. Le grade s'affiche ensuite dans la liste des enseignants.</p>
+  <figure><img src="img/manuel/sg-enseignant-carriere.png" alt=""><figcaption>Figure 11 — La carrière d'un enseignant</figcaption></figure>
 </section>
 
 <section class="chapitre">
   <h2>8. Matières</h2>
   <p>Menu Organisation → <b>Matières</b>. Une matière appartient à une classe et à un groupe rattaché à cette classe. Son <b>coefficient</b> est un entier de 1 à 20 ; son <b>ordre</b> fixe sa place dans le groupe sur le bulletin ; elle a au plus un professeur.</p>
-  <figure><img src="img/manuel/sg-matieres.png" alt=""><figcaption>Figure 11 — Matières d'une classe</figcaption></figure>
-  <figure><img src="img/manuel/sg-nouvelle-matiere.png" alt=""><figcaption>Figure 12 — Nouvelle matière</figcaption></figure>
+  <figure><img src="img/manuel/sg-matieres.png" alt=""><figcaption>Figure 12 — Matières d'une classe</figcaption></figure>
+  <figure><img src="img/manuel/sg-nouvelle-matiere.png" alt=""><figcaption>Figure 13 — Nouvelle matière</figcaption></figure>
   <div class="encadre attention">Supprimer une matière qui a des notes demande une confirmation et efface ses notes. Une matière notée ne peut plus changer de classe.</div>
 </section>
 
 <section class="chapitre">
   <h2>9. Élèves</h2>
   <p>Menu Scolarité → <b>Élèves</b>. La liste montre les élèves inscrits de l'année, par classe, avec une recherche par nom, prénom ou matricule. Les boutons <b>Liste PDF</b> et <b>Excel</b> produisent la liste de la classe choisie.</p>
-  <figure><img src="img/manuel/sg-eleves.png" alt=""><figcaption>Figure 13 — Les élèves</figcaption></figure>
+  <figure><img src="img/manuel/sg-eleves.png" alt=""><figcaption>Figure 14 — Les élèves</figcaption></figure>
   <h3>Inscrire des élèves</h3>
   <ul>
     <li><b>Ajouter des élèves</b> : choisissez la classe, puis remplissez une ligne par élève (nom, prénoms, sexe, date et lieu de naissance, redoublant, parent et son téléphone). La <b>photo</b> est facultative : cliquez la case Photo de la ligne. Une nouvelle ligne s'ajoute dès que vous remplissez la dernière ; les lignes vides sont ignorées. Un seul clic sur <b>Enregistrer</b> inscrit tout le monde.</li>
     <li><b>Importer</b> : téléchargez le modèle Excel, remplissez une ligne par élève, puis envoyez le fichier pour une classe.</li>
   </ul>
-  <figure><img src="img/manuel/sg-ajout-eleves.png" alt=""><figcaption>Figure 14 — Ajouter plusieurs élèves d'un coup, avec leur photo</figcaption></figure>
+  <figure><img src="img/manuel/sg-ajout-eleves.png" alt=""><figcaption>Figure 15 — Ajouter plusieurs élèves d'un coup, avec leur photo</figcaption></figure>
   <div class="encadre attention"><b>Tout ou rien.</b> Dans les deux cas, si une ligne est incomplète, rien n'est enregistré : les champs manquants sont entourés en rouge (ou la liste des erreurs indique quoi corriger dans le fichier). Le matricule scolaire est attribué à l'enregistrement ; le matricule national et l'adresse du parent se complètent ensuite sur la fiche.</div>
-  <figure><img src="img/manuel/sg-import.png" alt=""><figcaption>Figure 15 — Import d'élèves depuis Excel</figcaption></figure>
+  <figure><img src="img/manuel/sg-import.png" alt=""><figcaption>Figure 16 — Import d'élèves depuis Excel</figcaption></figure>
   <h3>Les photos de plusieurs élèves</h3>
   <p>Le bouton <b>Photos</b> montre les élèves d'une classe en vignettes. Cliquez un élève pour choisir sa photo, ou cliquez <b>Choisir plusieurs photos</b> : chaque fichier nommé avec le matricule de l'élève (par exemple <code>CTM26-0047.jpg</code>) est rangé chez lui. Vous pouvez aussi déposer les fichiers sur la fenêtre. « Seulement les élèves sans photo » n'affiche que ceux à qui il en manque une. Un seul <b>Enregistrer</b> envoie toutes les photos.</p>
-  <figure><img src="img/manuel/sg-photos.png" alt=""><figcaption>Figure 16 — Photos de plusieurs élèves</figcaption></figure>
+  <figure><img src="img/manuel/sg-photos.png" alt=""><figcaption>Figure 17 — Photos de plusieurs élèves</figcaption></figure>
   <p>Les photos sont réduites avant l'envoi : une photo de téléphone de plusieurs Mo pèse alors une centaine de Ko. Sur le téléphone, chaque photo se prend directement avec l'appareil.</p>
   <h3>La fiche de l'élève</h3>
   <p>Elle regroupe l'identité, la photo, le parcours dans l'établissement et les documents : <b>Générer le bulletin</b> pour la période choisie, et <b>Carte scolaire</b>, disponible dès que l'élève a une photo. <b>Modifier</b> corrige la fiche ; un élève qui a déjà des notes ne change plus de classe dans l'année.</p>
-  <figure><img src="img/manuel/sg-fiche-eleve.png" alt=""><figcaption>Figure 17 — Fiche de l'élève</figcaption></figure>
+  <figure><img src="img/manuel/sg-fiche-eleve.png" alt=""><figcaption>Figure 18 — Fiche de l'élève</figcaption></figure>
 </section>
 
 <section class="chapitre">
@@ -151,13 +156,13 @@
   <div class="etape"><div class="num">1</div><div>Créez la nouvelle année et ses classes (chapitre 4), puis choisissez-la en haut du menu.</div></div>
   <div class="etape"><div class="num">2</div><div><b>Élèves à réinscrire</b> : choisissez l'année et la classe d'origine, puis cochez les élèves. Seuls ceux qui ne sont pas encore inscrits dans la nouvelle année sont proposés.</div></div>
   <div class="etape"><div class="num">3</div><div><b>Classe d'accueil</b> dans la nouvelle année ; cochez « Inscrire comme redoublants » si besoin, puis <b>Réinscrire</b>.</div></div>
-  <figure><img src="img/manuel/sg-reinscription.png" alt=""><figcaption>Figure 18 — Réinscriptions : avec une seule année, la page invite à créer la suivante</figcaption></figure>
+  <figure><img src="img/manuel/sg-reinscription.png" alt=""><figcaption>Figure 19 — Réinscriptions : avec une seule année, la page invite à créer la suivante</figcaption></figure>
 </section>
 
 <section class="chapitre">
   <h2>11. Notes</h2>
   <p>Menu Évaluations → <b>Notes</b>. Pour une classe et une période : le relevé des notes, les moyennes et les rangs, avec <b>Exporter en Excel</b>. L'onglet <b>Notes manquantes</b> liste, matière par matière, les élèves sans note et leur professeur : utile avant de fermer une séquence.</p>
-  <figure><img src="img/manuel/sg-notes.png" alt=""><figcaption>Figure 19 — Relevé des notes d'une classe</figcaption></figure>
+  <figure><img src="img/manuel/sg-notes.png" alt=""><figcaption>Figure 20 — Relevé des notes d'une classe</figcaption></figure>
   <div class="encadre">Les notes en rouge sont sous la moyenne. Une note de trimestre est la moyenne des séquences évaluées du trimestre ; la note annuelle, la moyenne des trimestres évalués. Les moyennes sont pondérées par les coefficients.</div>
 </section>
 
@@ -165,30 +170,38 @@
   <h2>12. Bulletins et cartes scolaires</h2>
   <h3>Bulletins</h3>
   <p>Menu Évaluations → <b>Bulletins</b>. Choisissez la période, puis des <b>classes entières</b> ou des <b>élèves choisis</b>. Un seul PDF est produit, une page A4 bilingue par élève, prête à imprimer.</p>
-  <figure><img src="img/manuel/sg-bulletins.png" alt=""><figcaption>Figure 20 — Bulletins de notes</figcaption></figure>
+  <figure><img src="img/manuel/sg-bulletins.png" alt=""><figcaption>Figure 21 — Bulletins de notes</figcaption></figure>
   <h3>Cartes scolaires</h3>
   <p>Menu Scolarité → <b>Cartes scolaires</b>. Même choix des classes ou des élèves. Les cartes sont au format carte bancaire (85,6 × 54 mm), dix par page A4, avec des traits de coupe pour les découper à la main.</p>
-  <figure><img src="img/manuel/sg-cartes.png" alt=""><figcaption>Figure 21 — Cartes scolaires : vérification des photos</figcaption></figure>
+  <figure><img src="img/manuel/sg-cartes.png" alt=""><figcaption>Figure 22 — Cartes scolaires : vérification des photos</figcaption></figure>
   <div class="encadre attention"><b>La photo est obligatoire.</b> Dès que vous choisissez des élèves, l'application vérifie leurs photos et liste ceux qui n'en ont pas. Le bouton <b>Ajouter les photos manquantes</b> ouvre directement la fenêtre des photos sur ces élèves. Leur carte n'est pas imprimée tant que la photo manque.</div>
 </section>
 
 <section class="chapitre">
-  <h2>13. Statistiques et classement</h2>
+  <h2>13. Statistiques, classement et tableau d'honneur</h2>
   <p>Menu Évaluations → <b>Statistiques</b>, pour une période et sur trois onglets : <b>Établissement</b>, <b>Par classe</b>, <b>Par matière</b>. On y trouve la moyenne générale, le taux de réussite, les moyennes extrêmes, l'écart-type, le premier et le dernier élève, la meilleure et la dernière classe, la répartition des moyennes et la comparaison filles–garçons. <b>Classement général</b> : tous les élèves de l'établissement rangés ensemble.</p>
-  <figure><img src="img/manuel/sg-statistiques.png" alt=""><figcaption>Figure 22 — Statistiques de l'établissement</figcaption></figure>
-  <figure><img src="img/manuel/sg-classement.png" alt=""><figcaption>Figure 23 — Classement général</figcaption></figure>
+  <figure><img src="img/manuel/sg-statistiques.png" alt=""><figcaption>Figure 23 — Statistiques de l'établissement</figcaption></figure>
+  <figure><img src="img/manuel/sg-classement.png" alt=""><figcaption>Figure 24 — Classement général</figcaption></figure>
   <div class="encadre">Les rangs se calculent sur les moyennes arrondies au centième ; des élèves ex æquo partagent le rang et le suivant est sauté. Un élève réussit avec une moyenne de 10 ou plus. Un élève renvoyé sort des listes, des calculs et des classements.</div>
+  <h3>Tableau d'honneur</h3>
+  <p>Menu Évaluations → <b>Tableau d'honneur</b>. Pour une période (séquence, trimestre ou année) et toutes les classes ou une seule, il montre les élèves dont la moyenne atteint la moyenne minimale réglée dans les Paramètres, classe par classe et avec leur rang.</p>
+  <figure><img src="img/manuel/sg-tableau-honneur.png" alt=""><figcaption>Figure 25 — Tableau d'honneur</figcaption></figure>
+  <ul>
+    <li><b>Liste PDF</b> : la liste à afficher, classe par classe.</li>
+    <li><b>Certificats</b> : un certificat bilingue par élève, deux par page A4. Il porte la moyenne, le rang, la moyenne de la classe et le nom du professeur principal, qui le signe avec le Directeur. Renseignez donc le professeur principal de chaque classe (chapitre 5).</li>
+  </ul>
+  <p>Le bulletin d'un élève au tableau d'honneur porte la mention «&nbsp;TABLEAU D'HONNEUR / HONOUR&nbsp;ROLL&nbsp;».</p>
 </section>
 
 <section class="chapitre">
-  <h2>14. Vos décisions et le Proviseur</h2>
-  <p>Chacune de vos actions d'organisation, de scolarité ou d'administration (créer une classe, modifier une matière, inscrire un élève, ouvrir une séquence…) est consignée dans le journal <b>Décisions prises</b>, que seul le Proviseur consulte. Elle est <b>approuvée d'office</b>.</p>
+  <h2>14. Vos décisions et le Directeur</h2>
+  <p>Chacune de vos actions d'organisation, de scolarité ou d'administration (créer une classe, modifier une matière, inscrire un élève, ouvrir une séquence…) est consignée dans le journal <b>Décisions prises</b>, que seul le Directeur consulte. Elle est <b>approuvée d'office</b>.</p>
   <ul>
-    <li>Le Proviseur peut la <b>désapprouver</b> pendant <b>4 semaines</b>, avec un motif. L'action est alors <b>défaite</b> : une classe créée est supprimée, une modification est annulée, un élément supprimé est recréé.</li>
+    <li>Le Directeur peut la <b>désapprouver</b> pendant <b>4 semaines</b>, avec un motif. L'action est alors <b>défaite</b> : une classe créée est supprimée, une modification est annulée, un élément supprimé est recréé.</li>
     <li>Vous recevez une <b>notification</b> avec le motif et ce qui a été défait.</li>
     <li>Passé 4 semaines, la décision reste approuvée.</li>
   </ul>
-  <div class="encadre">Si l'action ne peut plus être défaite (par exemple, des élèves sont déjà inscrits dans la classe créée), la désapprobation est refusée et le Proviseur en voit la raison.</div>
+  <div class="encadre">Si l'action ne peut plus être défaite (par exemple, des élèves sont déjà inscrits dans la classe créée), la désapprobation est refusée et le Directeur en voit la raison.</div>
 </section>
 
 <section class="chapitre">
@@ -200,8 +213,10 @@
     <tr><td>Je ne trouve pas le groupe dans « Nouvelle matière ».</td><td>Le groupe n'est pas rattaché à cette classe. Ajoutez la classe dans la page Groupes de matières.</td></tr>
     <tr><td>Un professeur ne voit pas sa matière.</td><td>La matière n'a pas de professeur attribué, ou c'est un autre compte. Vérifiez dans Matières.</td></tr>
     <tr><td>Les professeurs ne peuvent pas saisir.</td><td>La séquence n'est pas ouverte (Années et séquences).</td></tr>
+    <tr><td>Le certificat du tableau d'honneur n'a pas de nom de professeur principal.</td><td>La classe n'a pas de professeur principal : choisissez-le dans la fenêtre de la classe.</td></tr>
+    <tr><td>L'en-tête des documents affiche un mauvais nom anglais ou téléphone.</td><td>Corrigez-le dans Paramètres (chapitre 3) ; les documents générés ensuite en tiennent compte.</td></tr>
     <tr><td>Un élève n'a pas de carte scolaire.</td><td>Il n'a pas de photo. Ajoutez-la avec le bouton Photos de la page Élèves, ou depuis sa fiche.</td></tr>
-    <tr><td>Une action que j'ai faite a été annulée.</td><td>Le Proviseur l'a désapprouvée : la notification en donne le motif.</td></tr>
+    <tr><td>Une action que j'ai faite a été annulée.</td><td>Le Directeur l'a désapprouvée : la notification en donne le motif.</td></tr>
     <tr><td>La page ne montre pas les dernières données.</td><td>Cliquez <b>Actualiser</b> en haut à droite de la page.</td></tr>
   </table>
 </section>

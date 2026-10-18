@@ -21,7 +21,7 @@
   </div>
   <div class="bas">
     <table>
-      <tr><td style="width:40%"><b>Code source</b></td><td>github.com/Dominique-BRIA/cetic-mezesse</td></tr>
+      <tr><td style="width:40%"><b>Code source</b></td><td>github.com/Dominique-BRIA : cetic-mezesse-backend, cetic-mezesse-web, cetic-mezesse-mobile</td></tr>
       <tr><td><b>Présenté par</b></td><td>........................................................</td></tr>
       <tr><td><b>Unité d'enseignement</b></td><td>........................................................</td></tr>
       <tr><td><b>Enseignant</b></td><td>........................................................</td></tr>
@@ -61,14 +61,15 @@
     <li>Produire en un clic les bulletins bilingues (séquence, trimestre, année) et les listes de classe.</li>
     <li>Donner à la direction une vue d'ensemble : classement général, première et dernière classe, comparaisons.</li>
     <li>Garder l'historique sur plusieurs années scolaires.</li>
+    <li>Produire les documents de la direction sur le modèle de l'établissement : tableau d'honneur et attestations de présence effective au poste des personnels.</li>
   </ul>
   <h3>1.3 Livrables</h3>
   <table>
     <tr><th>Livrable</th><th>Technologies</th></tr>
-    <tr><td>API (serveur)</td><td>Node.js, Express 5, TypeScript, Prisma, PostgreSQL, pdfkit, ExcelJS</td></tr>
+    <tr><td>API (serveur)</td><td>Java 21, Spring Boot 3.5 (Web, Security, Data JPA, Validation), Hibernate, Flyway, PostgreSQL, PDFBox, Apache POI</td></tr>
     <tr><td>Application web</td><td>Next.js 16 (React 19), Tailwind CSS, TanStack Query, Recharts</td></tr>
     <tr><td>Application mobile Android</td><td>Flutter (Dart), fl_chart, stockage local pour le hors connexion</td></tr>
-    <tr><td>Documents</td><td>Ce rapport, le manuel d'utilisation, les diagrammes sources (<code>docs/diagrammes</code>)</td></tr>
+    <tr><td>Documents</td><td>Ce rapport, un manuel et un guide de première utilisation par rôle, les règles de gestion, les diagrammes sources (<code>docs/diagrammes</code>)</td></tr>
   </table>
 </section>
 
@@ -77,14 +78,14 @@
   <h3>2.1 Acteurs</h3>
   <div class="grille2">
     <div class="carte"><b>Professeur</b><br>Saisit les notes des élèves de ses classes dans ses matières, identifie les élèves sans note, consulte les statistiques de ses matières.</div>
-    <div class="carte"><b>Surveillant Général (SG)</b><br>Organise l'année : élèves, classes, groupes de matières, matières et coefficients, comptes enseignants, séquences. Génère bulletins et listes, consulte notes, statistiques et classement.</div>
-    <div class="carte"><b>Proviseur</b><br>Consulte toutes les listes et statistiques, crée un élève, renvoie un élève et le réintègre.</div>
+    <div class="carte"><b>Surveillant Général (SG)</b><br>Organise l'année : élèves, classes, groupes de matières, matières et coefficients, comptes enseignants, séquences. Génère bulletins, listes et tableau d'honneur, consulte notes, statistiques et classement.</div>
+    <div class="carte"><b>Directeur ou Directrice</b> (chef d'établissement)<br>Consulte toutes les listes et statistiques, crée un élève, renvoie un élève et le réintègre, désapprouve les décisions du SG, délivre les attestations de présence effective au poste, règle avec le SG la moyenne du tableau d'honneur.</div>
     <div class="carte"><b>Système</b><br>Calcule les résultats, attribue les matricules, conserve la file d'attente des notes saisies hors connexion.</div>
   </div>
   <h3>2.2 Matrice des droits</h3>
   <p>Les droits sont vérifiés <b>par l'API</b> à chaque requête ; l'interface ne fait que masquer ce qui n'est pas permis.</p>
   <table>
-    <tr><th>Fonction</th><th>Professeur</th><th>SG</th><th>Proviseur</th></tr>
+    <tr><th>Fonction</th><th>Professeur</th><th>SG</th><th>Directeur</th></tr>
     <tr><td>Saisir les notes de ses matières</td><td>oui</td><td>non</td><td>non</td></tr>
     <tr><td>Élèves sans note, statistiques de ses matières</td><td>oui</td><td>toutes</td><td>toutes</td></tr>
     <tr><td>Créer un élève</td><td>non</td><td>oui</td><td>oui</td></tr>
@@ -94,7 +95,11 @@
     <tr><td>Bulletins, listes, relevés</td><td>non</td><td>oui</td><td>oui</td></tr>
     <tr><td>Toutes les notes, statistiques, classement général</td><td>non</td><td>oui</td><td>oui</td></tr>
     <tr><td>Renvoyer et réintégrer un élève</td><td>non</td><td>lecture</td><td>oui</td></tr>
-    <tr><td>Paramètres de l'établissement et barèmes</td><td>non</td><td>oui</td><td>non</td></tr>
+    <tr><td>Paramètres de l'établissement et barèmes</td><td>non</td><td>oui</td><td>lecture</td></tr>
+    <tr><td>Tableau d'honneur : moyenne minimale, liste et certificats</td><td>non</td><td>oui</td><td>oui</td></tr>
+    <tr><td>Carrière des personnels</td><td>non</td><td>enseignants</td><td>oui</td></tr>
+    <tr><td>Attestations de présence effective au poste</td><td>non</td><td>non</td><td>oui</td></tr>
+    <tr><td>Journal des décisions du SG, désapprobation</td><td>non</td><td>non</td><td>oui</td></tr>
   </table>
   <h3>2.3 Exigences non fonctionnelles</h3>
   <ul>
@@ -110,7 +115,7 @@
   <p>Ces règles ont été validées avec le commanditaire avant le développement. Chacune est appliquée dans l'API et, quand c'est possible, garantie par une contrainte de la base.</p>
   <table>
     <tr><th style="width:12%">N°</th><th>Règle</th></tr>
-    <tr><td>RG-01</td><td>Trois rôles : Proviseur, Surveillant Général, Professeur. Le Proviseur et le SG sont créés à l'installation ; le SG crée les comptes des professeurs.</td></tr>
+    <tr><td>RG-01</td><td>Trois rôles : Directeur (chef d'établissement), Surveillant Général, Professeur. Le Directeur et le SG sont créés à l'installation ; le SG crée les comptes des professeurs.</td></tr>
     <tr><td>RG-02</td><td>On se connecte avec son téléphone ou son e-mail (au moins l'un des deux, chacun unique) et un mot de passe.</td></tr>
     <tr><td>RG-03</td><td>Un mot de passe créé ou réinitialisé par le SG vaut <code>password</code> et doit être changé à la connexion suivante (8 caractères au moins, différent de <code>password</code>).</td></tr>
     <tr><td>RG-04</td><td>Une session dure 12 heures ; un compte désactivé perd l'accès immédiatement.</td></tr>
@@ -123,8 +128,8 @@
     <tr><td>RG-11</td><td>Le matricule scolaire est généré : préfixe, deux chiffres de l'année, rang sur quatre chiffres (<code>CTM26-0007</code>). Le matricule national (cartescolaire.cm) est facultatif et unique.</td></tr>
     <tr><td>RG-12</td><td>Un élève a au plus une inscription par année. Un élève qui a des notes ne change plus de classe dans l'année.</td></tr>
     <tr><td>RG-13</td><td>L'import d'élèves est « tout ou rien » : une seule ligne invalide et rien n'est enregistré.</td></tr>
-    <tr><td>RG-14</td><td>Le SG et le Proviseur créent les élèves ; seul le SG les modifie.</td></tr>
-    <tr><td>RG-15</td><td>Seul le Proviseur renvoie (date et motif obligatoires) et réintègre. Un élève renvoyé sort des listes, calculs, classements et bulletins ; ses notes sont conservées.</td></tr>
+    <tr><td>RG-14</td><td>Le SG et le Directeur créent les élèves ; seul le SG les modifie.</td></tr>
+    <tr><td>RG-15</td><td>Seul le Directeur renvoie (date et motif obligatoires) et réintègre. Un élève renvoyé sort des listes, calculs, classements et bulletins ; ses notes sont conservées.</td></tr>
     <tr><td>RG-16</td><td>Une note par élève, matière et séquence, entre 0 et 20, deux décimales au plus.</td></tr>
     <tr><td>RG-17</td><td>Seul le professeur de la matière saisit ses notes, et seulement si la séquence est ouverte.</td></tr>
     <tr><td>RG-18</td><td>Le SG ouvre et ferme la saisie séquence par séquence ; une séquence fermée est en lecture seule et peut être rouverte.</td></tr>
@@ -138,13 +143,16 @@
     <tr><td>RG-26</td><td>Le bulletin est bilingue, une page A4 par élève ; le bloc discipline et l'emplacement du cachet restent vides (remplis à la main).</td></tr>
     <tr><td>RG-27</td><td>Le classement général range tous les élèves de l'établissement ensemble, toutes classes confondues.</td></tr>
     <tr><td>RG-28</td><td>Sur mobile, les notes saisies sans réseau sont gardées puis envoyées automatiquement ; un refus du serveur est signalé et la note n'est pas perdue.</td></tr>
+    <tr><td>RG-33</td><td>Le chef d'établissement s'intitule « Directeur », ou « Directrice » si sa civilité est « Mme » ; ce titre s'affiche dans l'application et s'imprime sur les cartes scolaires, les attestations et les certificats. L'en-tête officiel des documents est bilingue : République, ministère, délégations régionale et départementale, arrondissement, sigle et localité (« CETIC DE MEZESSE » / « GTC MEZESSE »), téléphone.</td></tr>
+    <tr><td>RG-34</td><td>Seul le Directeur délivre l'attestation de présence effective au poste, à un personnel (enseignant ou SG ; jamais au Directeur lui-même, dont l'attestation relève de sa hiérarchie) dont la carrière est renseignée : matricule, grade, fonction et date de prise de service obligatoires, acte de nomination facultatif. Chaque attestation reçoit un numéro dans l'année scolaire (« N° 006/2026-2027/CETIC/D ») et garde les informations du jour où elle est délivrée.</td></tr>
+    <tr><td>RG-35</td><td>Un élève figure au tableau d'honneur d'une période quand sa moyenne arrondie au centième atteint la moyenne minimale (12,00 par défaut), réglée par le Directeur ou le SG. Le certificat est bilingue, sans mention d'encouragements ni de félicitations, et signé par le professeur principal et le Directeur. Le bulletin porte la mention « TABLEAU D'HONNEUR / HONOUR ROLL ».</td></tr>
   </table>
 </section>
 
 <section class="chapitre">
   <h2>4. Conception des données : MCD et MLD</h2>
   <h3>4.1 Modèle conceptuel des données (Merise)</h3>
-  <p>Le MCD comporte neuf entités. L'association <b>OBTENIR</b> est ternaire : une note relie une inscription, une matière et une séquence, et porte la valeur. L'<b>INSCRIPTION</b> est l'élève dans une classe pour une année : c'est sur elle que portent les notes et le renvoi, ce qui permet de réinscrire un élève l'année suivante sans perdre son historique.</p>
+  <p>Le MCD comporte dix entités. L'association <b>OBTENIR</b> est ternaire : une note relie une inscription, une matière et une séquence, et porte la valeur. L'<b>INSCRIPTION</b> est l'élève dans une classe pour une année : c'est sur elle que portent les notes et le renvoi, ce qui permet de réinscrire un élève l'année suivante sans perdre son historique.</p>
   <div class="paysage"><figure class="diagramme"><img src="img/mcd.svg" alt="MCD"><figcaption>Figure 1 — Modèle conceptuel des données (Merise)</figcaption></figure></div>
 
   <h3>4.2 Dictionnaire des données (extrait)</h3>
@@ -157,8 +165,11 @@
     <tr><td>MATIÈRE</td><td>coefficient</td><td>entier</td><td>1 à 20</td></tr>
     <tr><td>OBTENIR (NOTE)</td><td>valeur</td><td>décimal (4,2)</td><td>0 à 20 ; unique par (inscription, matière, séquence)</td></tr>
     <tr><td>SÉQUENCE</td><td>numéro / trimestre</td><td>entier</td><td>1 à 6 / 1 à 3 ; unique par (année, numéro)</td></tr>
-    <tr><td>UTILISATEUR</td><td>rôle</td><td>énumération</td><td>PROVISEUR, SURVEILLANT_GENERAL, PROFESSEUR</td></tr>
+    <tr><td>UTILISATEUR</td><td>rôle</td><td>énumération</td><td>PROVISEUR (le Directeur), SURVEILLANT_GENERAL, PROFESSEUR</td></tr>
     <tr><td>UTILISATEUR</td><td>mot de passe</td><td>texte</td><td>empreinte bcrypt, jamais en clair</td></tr>
+    <tr><td>UTILISATEUR</td><td>matricule</td><td>texte</td><td>facultatif, unique (matricule de la fonction publique)</td></tr>
+    <tr><td>ATTESTATION</td><td>référence</td><td>texte</td><td>unique, « N° 001/2026-2027/CETIC/D » (RG-34)</td></tr>
+    <tr><td>ÉTABLISSEMENT</td><td>moyenne minimale du tableau d'honneur</td><td>décimal (4,2)</td><td>12,00 par défaut (RG-35)</td></tr>
     <tr><td>BARÈME</td><td>libellé, borne basse</td><td>texte, décimal</td><td>unique par (type, libellé)</td></tr>
   </table>
 
@@ -169,6 +180,7 @@
     <li>Une association (0,1) donne une clé étrangère facultative (<code>MATIERE.professeurId</code>, <code>CLASSE.profPrincipalId</code>).</li>
     <li>L'association n-n REGROUPER devient la table de jointure <code>CLASSE_GROUPE</code>.</li>
     <li>Les associations porteuses OBTENIR et VISER deviennent les tables <code>NOTE</code> et <code>COMPETENCE_VISEE</code>.</li>
+    <li>Les associations BÉNÉFICIER et DÉLIVRER donnent les clés étrangères <code>ATTESTATION.utilisateurId</code> et <code>ATTESTATION.parId</code>. L'attestation recopie aussi le nom, le grade et la fonction du bénéficiaire du jour où elle est délivrée : corriger la carrière ensuite ne modifie pas une attestation déjà signée.</li>
   </ul>
   <h3>4.4 Schéma relationnel</h3>
   <p class="formule">
@@ -178,14 +190,15 @@
     GROUPE_MATIERE (<u>id</u>, #anneeId, nom, nomEn, ordre)<br>
     CLASSE_GROUPE (<u>#classeId, #groupeId</u>)<br>
     MATIERE (<u>id</u>, #classeId, #groupeId, nom, nomEn, coefficient, ordre, #professeurId)<br>
-    UTILISATEUR (<u>id</u>, nom, prenom, telephone, email, motDePasse, role, actif, doitChangerMotDePasse, discipline)<br>
+    UTILISATEUR (<u>id</u>, nom, prenom, telephone, email, motDePasse, role, actif, doitChangerMotDePasse, discipline, sexe, matricule, grade, fonction, datePriseService, dateEntreeFonctionPublique, acteNomination)<br>
+    ATTESTATION (<u>id</u>, reference, numero, anneeLibelle, #utilisateurId, beneficiaire, sexe, matricule, grade, fonction, datePriseService, acteNomination, signataire, #parId, delivreeLe)<br>
     ELEVE (<u>id</u>, matricule, matriculeNational, nom, prenoms, sexe, dateNaissance, lieuNaissance, photoCle, parentNom, parentTelephone, parentAdresse)<br>
     INSCRIPTION (<u>id</u>, #eleveId, #anneeId, #classeId, redoublant, statut)<br>
     NOTE (<u>id</u>, #inscriptionId, #matiereId, #sequenceId, valeur, #saisieParId)<br>
     COMPETENCE_VISEE (<u>#matiereId, #sequenceId</u>, texte)<br>
     RENVOI (<u>id</u>, #inscriptionId, date, motif, #parId, reintegreLe, #reintegreParId, motifReintegration)<br>
     BAREME (<u>id</u>, type, libelle, libelleLong, min)<br>
-    ETABLISSEMENT (<u>id</u>, nomFr, nomEn, sigle, regionFr, regionEn, departementFr, departementEn, arrondissement, localite, code, prefixeMatricule, …)<br>
+    ETABLISSEMENT (<u>id</u>, nomFr, nomEn, sigle, sigleEn, regionFr, regionEn, departementFr, departementEn, arrondissement, localite, telephone, code, prefixeMatricule, seuilTableauHonneur, …)<br>
     COMPTEUR (<u>cle</u>, valeur)
   </p>
   <p>Les tables ETABLISSEMENT (une ligne), BAREME et COMPTEUR (attribution atomique des matricules) n'ont pas de lien avec les autres.</p>
@@ -206,10 +219,19 @@
   </table>
   <h4>Description textuelle : « Renvoyer un élève »</h4>
   <table>
-    <tr><th style="width:28%">Acteur</th><td>Proviseur</td></tr>
+    <tr><th style="width:28%">Acteur</th><td>Directeur</td></tr>
     <tr><th>Préconditions</th><td>L'inscription de l'élève pour l'année est active.</td></tr>
     <tr><th>Scénario nominal</th><td>1. Il ouvre la fiche de l'élève et choisit « Renvoyer ». 2. Il saisit la date et le motif. 3. Le système passe l'inscription à RENVOYÉ et enregistre le renvoi avec son auteur.</td></tr>
     <tr><th>Postcondition</th><td>L'élève n'apparaît plus que dans « Élèves renvoyés » ; la réintégration annule l'effet et garde l'historique.</td></tr>
+  </table>
+
+  <h4>Description textuelle : « Délivrer une attestation de présence effective au poste »</h4>
+  <table>
+    <tr><th style="width:28%">Acteur</th><td>Directeur</td></tr>
+    <tr><th>Préconditions</th><td>Le bénéficiaire a un compte (enseignant ou SG).</td></tr>
+    <tr><th>Scénario nominal</th><td>1. Il ouvre « Attestations de présence » et choisit « Nouvelle attestation ». 2. Il choisit le personnel ; le système affiche sa carrière. 3. Il complète le matricule, le grade, la fonction et la date de prise de service. 4. Il délivre. 5. Le système enregistre la carrière, attribue le numéro suivant de l'année et garde l'attestation au registre. 6. Il imprime le PDF et le signe.</td></tr>
+    <tr><th>Variantes</th><td>4a. Carrière incomplète : refus, avec la liste de ce qui manque. 4b. Le bénéficiaire est le Directeur lui-même : refus, son attestation relève de sa hiérarchie.</td></tr>
+    <tr><th>Postcondition</th><td>L'attestation figure au registre avec sa référence et peut être réimprimée à l'identique.</td></tr>
   </table>
 
   <h3>5.2 Diagramme de classes</h3>
@@ -258,25 +280,23 @@
   <h3>7.1 Organisation du code</h3>
   <table>
     <tr><th>Dossier</th><th>Contenu</th></tr>
-    <tr><td><code>api/prisma</code></td><td>Schéma de la base, migrations, amorçage et jeu de démonstration</td></tr>
-    <tr><td><code>api/src/calcul</code></td><td>Module pur des calculs (section 6)</td></tr>
-    <tr><td><code>api/src/routes</code></td><td>Une route par domaine : auth, élèves, classes, groupes, matières, utilisateurs, notes, statistiques, documents, années</td></tr>
-    <tr><td><code>api/src/pdf</code></td><td>Bulletins et listes (pdfkit), en-tête officiel bilingue et sceau</td></tr>
+    <tr><td>dépôt <code>cetic-mezesse-backend</code></td><td>API Spring Boot selon la structure habituelle : <code>entity</code> (entités JPA), <code>repository</code> (Spring Data), <code>service</code> (règles de gestion ; <code>service/calcul</code> est le module pur des calculs de la section 6), <code>controller</code> (une ressource REST par domaine), <code>dto</code> (entrées validées et réponses), <code>security</code> (JWT, rôles), <code>document</code> (PDF et Excel)</td></tr>
+    <tr><td><code>src/main/resources/db/migration</code></td><td>Migrations Flyway de la base (V1 à V5) ; l'amorçage et le jeu de démonstration se lancent avec l'option <code>--amorcer</code></td></tr>
     <tr><td>dépôt <code>cetic-mezesse-web</code></td><td>Une page par adresse (<code>src/app</code>), écrans par rôle (<code>src/ecrans</code>), composants communs, graphiques, motif de fond</td></tr>
     <tr><td><code>mobile/lib</code></td><td>Client API avec cache, file d'attente hors connexion, écrans par rôle</td></tr>
   </table>
   <h3>7.2 Sécurité</h3>
   <ul>
-    <li>Mots de passe hachés avec <b>bcrypt</b> ; jeton <b>JWT</b> signé, valable 12 heures, vérifié à chaque requête avec l'état du compte.</li>
-    <li>Contrôle des rôles <b>côté serveur</b> sur chaque route ; un professeur n'accède qu'à ses matières.</li>
-    <li>Validation de toutes les entrées avec <b>Zod</b> ; messages d'erreur en français.</li>
-    <li>Limitation des tentatives de connexion (20 par quart d'heure) ; en-têtes de sécurité HTTP (Helmet) ; CORS limité aux origines déclarées.</li>
+    <li>Mots de passe hachés avec <b>bcrypt</b> ; jeton <b>JWT</b> signé, valable 12 heures, vérifié à chaque requête par <b>Spring Security</b> avec l'état du compte.</li>
+    <li>Contrôle des rôles <b>côté serveur</b> sur chaque route, par des annotations sur les méthodes des contrôleurs ; un professeur n'accède qu'à ses matières.</li>
+    <li>Validation de toutes les entrées avec <b>Bean Validation</b> ; messages d'erreur en français.</li>
+    <li>Limitation des tentatives de connexion (20 par quart d'heure) ; en-têtes de sécurité HTTP ; CORS limité aux origines déclarées.</li>
     <li>Secrets (base, B2, JWT) dans des variables d'environnement, jamais dans le dépôt.</li>
   </ul>
   <h3>7.3 Intégrité des données</h3>
   <p>Les règles critiques sont portées par des <b>contraintes</b> PostgreSQL : unicité d'une note par (inscription, matière, séquence), d'une inscription par (élève, année), des matricules ; suppression en cascade des notes d'une matière supprimée ; interdiction de supprimer un groupe encore utilisé. Le matricule est attribué par un compteur incrémenté de façon atomique, ce qui évite les doublons en cas de créations simultanées. Les opérations multiples (feuille de notes, import, renvoi) sont faites en <b>transaction</b>.</p>
   <h3>7.4 Documents PDF et Excel</h3>
-  <p>Les bulletins sont dessinés avec pdfkit, page par page : en-tête bilingue avec le sceau, identité et photo de l'élève, tableau par groupes de matières, blocs discipline, travail de l'élève avec la cote cochée, profil de la classe, signatures. La hauteur des lignes s'adapte au nombre de matières pour tenir sur une page A4. Les listes et relevés Excel sont produits avec ExcelJS.</p>
+  <p>Les documents sont dessinés avec PDFBox. Leur en-tête officiel, commun à tous, reprend celui des documents de l'établissement : République, ministère, délégations, arrondissement, sigles français et anglais, téléphone et emblème. Les bulletins sont dessinés page par page : en-tête, identité et photo de l'élève, tableau par groupes de matières, blocs discipline, travail de l'élève avec la cote cochée, profil de la classe, signatures. La hauteur des lignes s'adapte au nombre de matières pour tenir sur une page A4. Les listes et relevés Excel sont produits avec Apache POI. Les certificats du tableau d'honneur (deux par page A4, signés par le professeur principal et le Directeur) et les attestations de présence effective au poste suivent les modèles en usage dans l'établissement.</p>
   <h3>7.5 Fonctionnement hors connexion (mobile)</h3>
   <p>Chaque lecture réussie est copiée sur le téléphone ; sans réseau, l'application relit cette copie. Les notes enregistrées sans réseau sont placées dans une <b>file d'attente</b> persistante, fusionnée par feuille (matière et séquence), et réaffichées sur la feuille. La file est vidée au retour du réseau, chaque minute ou à la demande ; une feuille refusée par le serveur reste dans la file avec le motif du refus.</p>
 </section>
@@ -301,7 +321,7 @@
 <section class="chapitre">
   <h2>9. Validation et tests</h2>
   <h3>9.1 Tests unitaires du calcul</h3>
-  <p>Quinze tests automatiques (Vitest) couvrent les seuils des grades et des cotes, l'arrondi avant comparaison, les rangs avec ex æquo, la note 0 dans une matière évaluée, le retrait d'une matière non évaluée, les totaux et moyennes de groupe, les moyennes de trimestre et d'année avec séquences ou trimestres manquants, et la répartition par tranches. Ils passent tous.</p>
+  <p>Vingt-sept tests automatiques (JUnit), joués à chaque envoi du code sur GitHub, vérifient les règles de gestion, le stockage des photos et le calcul. Les quinze tests du calcul couvrent les seuils des grades et des cotes, l'arrondi avant comparaison, les rangs avec ex æquo, la note 0 dans une matière évaluée, le retrait d'une matière non évaluée, les totaux et moyennes de groupe, les moyennes de trimestre et d'année avec séquences ou trimestres manquants, et la répartition par tranches. Ils passent tous.</p>
   <h3>9.2 Parcours de bout en bout</h3>
   <p>Un scénario automatisé de 31 contrôles a été joué contre l'API sur la base de démonstration (4 classes, 70 élèves, 14 professeurs). Tous passent, notamment :</p>
   <ul>
@@ -309,7 +329,7 @@
     <li>un professeur ne voit que ses matières et ne peut ouvrir la feuille d'un collègue, ni lister les élèves, ni produire des bulletins ;</li>
     <li>saisie acceptée en séquence ouverte, refusée en séquence fermée, puis acceptée après réouverture par le SG ;</li>
     <li>refus d'une note supérieure à 20 ou à trois décimales ;</li>
-    <li>création d'un élève par le Proviseur avec un matricule au bon format ; le SG ne peut pas renvoyer ; renvoi, sortie de la liste, présence parmi les renvoyés, réintégration ;</li>
+    <li>création d'un élève par le Directeur avec un matricule au bon format ; le SG ne peut pas renvoyer ; renvoi, sortie de la liste, présence parmi les renvoyés, réintégration ;</li>
     <li>création d'un compte professeur, première connexion avec <code>password</code>, refus de <code>password</code> comme nouveau mot de passe, réinitialisation ;</li>
     <li>classement général et statistiques de classe cohérents.</li>
   </ul>
@@ -321,13 +341,13 @@
   <h2>10. Déploiement</h2>
   <table>
     <tr><th>Composant</th><th>Hébergement</th><th>Remarque</th></tr>
-    <tr><td>Base de données</td><td>Neon (PostgreSQL)</td><td>migrations appliquées par <code>prisma migrate deploy</code></td></tr>
-    <tr><td>API</td><td>Azure App Service (compte étudiant)</td><td>variables : base, JWT, CORS, B2</td></tr>
-    <tr><td>Application web</td><td>Vercel</td><td>variable <code>NEXT_PUBLIC_API_URL</code></td></tr>
+    <tr><td>Base de données</td><td>Neon (PostgreSQL)</td><td>migrations Flyway appliquées au démarrage de l'API</td></tr>
+    <tr><td>API</td><td>Azure App Service, Java 21 (compte étudiant)</td><td>le jar est construit et testé par GitHub Actions, puis déployé à chaque modification ; variables : base, JWT, CORS, B2</td></tr>
+    <tr><td>Application web</td><td>Vercel</td><td>redéployée à chaque modification ; variable <code>NEXT_PUBLIC_API_URL</code></td></tr>
     <tr><td>Photos des élèves</td><td>Backblaze B2</td><td>API compatible S3 ; disque local en développement</td></tr>
     <tr><td>Application Android</td><td>GitHub Actions</td><td>l'APK est construit à chaque modification du dossier <code>mobile</code></td></tr>
   </table>
-  <div class="encadre attention">À la date de ce rapport, l'application tourne en local et le code est publié sur GitHub ; la mise en ligne sur Neon, Azure et Vercel reste à faire.</div>
+  <div class="encadre">L'application est en ligne : le site web sur https://ceticmezesse.vercel.app, l'API sur Azure, la base sur Neon. Le code est réparti en trois dépôts GitHub (API, web, mobile), chacun avec son déploiement automatique.</div>
 </section>
 
 <section class="chapitre">
@@ -338,6 +358,7 @@
     <li>Pas de rôle Censeur, un seul Surveillant Général.</li>
     <li>Sur mobile, seule la saisie des notes fonctionne sans réseau ; les autres modifications demandent une connexion.</li>
     <li>Pas d'espace élève ni parent.</li>
+    <li>Pas de gestion des emplois du temps.</li>
   </ul>
   <h3>11.2 Perspectives</h3>
   <ul>
@@ -350,7 +371,7 @@
 
 <section class="chapitre">
   <h2>12. Conclusion</h2>
-  <p>L'application répond au cahier des charges des trois rôles : saisie des notes par les professeurs, y compris hors connexion sur mobile ; organisation complète de l'année et production des bulletins et listes par le Surveillant Général ; consultation, renvoi et réintégration par le Proviseur. La conception Merise et UML a guidé une base de données dont les règles essentielles sont garanties par des contraintes, et un module de calcul isolé et testé assure des moyennes, des rangs et des statistiques exacts. Il reste à mettre l'application en ligne pour l'utiliser dès la prochaine séquence.</p>
+  <p>L'application répond au cahier des charges des trois rôles : saisie des notes par les professeurs, y compris hors connexion sur mobile ; organisation complète de l'année et production des bulletins et listes par le Surveillant Général ; consultation, renvoi et réintégration, attestations des personnels et tableau d'honneur pour le Directeur. La conception Merise et UML a guidé une base de données dont les règles essentielles sont garanties par des contraintes, et un module de calcul isolé et testé assure des moyennes, des rangs et des statistiques exacts. L'application est en ligne et prête pour la prochaine séquence.</p>
 </section>
 
 <section class="chapitre">
@@ -360,9 +381,12 @@
   <figure><img src="img/sg-notes.png" alt=""><figcaption>Figure 13 — Relevé de notes d'une classe</figcaption></figure>
   <figure><img src="img/sg-statistiques.png" alt=""><figcaption>Figure 14 — Statistiques de l'établissement</figcaption></figure>
   <figure><img src="img/sg-classement.png" alt=""><figcaption>Figure 15 — Classement général</figcaption></figure>
-  <figure><img src="img/proviseur-renvoyes.png" alt=""><figcaption>Figure 16 — Élèves renvoyés (Proviseur)</figcaption></figure>
-  <figure><img src="img/bulletin-sequence.png" alt="" style="max-height:200mm"><figcaption>Figure 17 — Bulletin de séquence</figcaption></figure>
-  <figure><img src="img/bulletin-trimestre.png" alt="" style="max-height:200mm"><figcaption>Figure 18 — Bulletin de trimestre</figcaption></figure>
+  <figure><img src="img/directeur-renvoyes.png" alt=""><figcaption>Figure 16 — Élèves renvoyés (Directeur)</figcaption></figure>
+  <figure><img src="img/tableau-honneur.png" alt=""><figcaption>Figure 17 — Tableau d'honneur</figcaption></figure>
+  <figure><img src="img/bulletin-sequence.png" alt="" style="max-height:200mm"><figcaption>Figure 18 — Bulletin de séquence</figcaption></figure>
+  <figure><img src="img/bulletin-trimestre.png" alt="" style="max-height:200mm"><figcaption>Figure 19 — Bulletin de trimestre</figcaption></figure>
+  <figure><img src="img/certificats-tableau-honneur.png" alt="" style="max-height:200mm"><figcaption>Figure 20 — Certificats du tableau d'honneur</figcaption></figure>
+  <figure><img src="img/attestation.png" alt="" style="max-height:200mm"><figcaption>Figure 21 — Attestation de présence effective au poste</figcaption></figure>
 </section>
 
 </body>

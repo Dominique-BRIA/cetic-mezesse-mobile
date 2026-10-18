@@ -8,6 +8,11 @@ classDiagram
     +Role role
     +Boolean actif
     +Boolean doitChangerMotDePasse
+    +Sexe sexe
+    +String matricule
+    +String grade
+    +String fonction
+    +Date datePriseService
     +connecter(identifiant, motDePasse) Jeton
     +changerMotDePasse(ancien, nouveau)
   }
@@ -66,6 +71,12 @@ classDiagram
     +String motif
     +Date reintegreLe
   }
+  class Attestation {
+    +String reference
+    +Int numero
+    +String beneficiaire
+    +Date delivreeLe
+  }
   class CalculResultats {
     <<service>>
     +calculerResultats(periode, matieres, inscriptions, notes) ResultatsClasse
@@ -87,4 +98,5 @@ classDiagram
   Matiere "1" -- "0..*" Note
   Sequence "1" -- "0..*" Note
   Inscription "1" -- "0..*" Renvoi
+  Utilisateur "1" -- "0..*" Attestation : bénéficie
   CalculResultats ..> Note : lit

@@ -20,6 +20,8 @@ erDiagram
   SEQUENCE ||--o{ COMPETENCE_VISEE : date
   INSCRIPTION ||--o{ RENVOI : concerne
   UTILISATEUR ||--o{ RENVOI : decide
+  UTILISATEUR ||--o{ ATTESTATION : beneficie
+  UTILISATEUR ||--o{ ATTESTATION : delivre
 
   ANNEE_SCOLAIRE {
     text id PK
@@ -65,6 +67,10 @@ erDiagram
     text motDePasse
     enum role
     boolean actif
+    enum sexe
+    text matricule UK
+    text grade
+    date datePriseService
   }
   ELEVE {
     text id PK
@@ -103,4 +109,14 @@ erDiagram
     text motif
     text parId FK
     timestamp reintegreLe
+  }
+  ATTESTATION {
+    text id PK
+    text reference UK
+    int numero
+    text utilisateurId FK
+    text matricule
+    text grade
+    text parId FK
+    timestamp delivreeLe
   }
