@@ -74,7 +74,16 @@ class Api {
     if (etaitHorsLigne) surRetourReseau?.call();
   }
 
+  /// Exécute [lecture] en ne servant que les copies gardées sur le téléphone, sans aucun appel réseau :
+  /// un écran peut ainsi s'afficher aussitôt avec sa dernière version connue. Échoue s'il manque une copie.
+  Future<R> copieSeulement<R>(Future<R> Function() lecture) => runZoned(lecture, zoneValues: {_copieSeule: true});
+
+  static const _copieSeule = #copieSeule;
+  bool get _enCopieSeule => Zone.current[_copieSeule] == true;
+
   Future<http.Response> _executer(Future<http.Response> Function() requete, {String quoi = 'requête'}) async {
+    // Lecture de la copie locale : jamais de réseau, et surtout jamais d'écriture.
+    if (_enCopieSeule) throw ErreurApi(0, 'Pas de copie locale.');
     http.Response r;
     final chrono = Stopwatch()..start();
     try {
@@ -119,6 +128,10 @@ class Api {
     // Déjà hors ligne : on sert la copie tout de suite et on retente le réseau en arrière-plan,
     // plutôt que d'attendre l'expiration de chaque requête.
     final copieConnue = prefs.getString(cle);
+    if (_enCopieSeule) {
+      if (copieConnue == null) throw ErreurApi(0, 'Pas de copie locale.');
+      return jsonDecode(copieConnue);
+    }
     if (horsLigne.value && copieConnue != null) {
       unawaited(_rafraichirCache(uri, cle));
       return jsonDecode(copieConnue);
@@ -157,6 +170,17 @@ class Api {
   Future<dynamic> put(String chemin, Object corps) => envoyer('PUT', chemin, corps: corps);
   Future<dynamic> patch(String chemin, Object corps) => envoyer('PATCH', chemin, corps: corps);
   Future<dynamic> delete(String chemin) => envoyer('DELETE', chemin);
+
+  /// Met en réserve, en arrière-plan, les données des écrans du menu : ils s'ouvriront ensuite tout de
+  /// suite avec cette copie. Les échecs sont ignorés (l'écran refera la requête).
+  Future<void> precharger(List<(String, bool)> lectures) async {
+    for (final (chemin, annee) in lectures) {
+      if (jeton == null || horsLigne.value) return;
+      try {
+        await get(chemin, annee: annee);
+      } catch (_) {}
+    }
+  }
 
   Future<dynamic> televerser(String chemin, String champ, File fichier, {Map<String, String> champs = const {}}) async {
     final req = http.MultipartRequest('POST', _uri(chemin))

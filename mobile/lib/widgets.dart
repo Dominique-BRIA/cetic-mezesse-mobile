@@ -158,11 +158,67 @@ class EtatTexte extends StatelessWidget {
   }
 }
 
-class Chargement extends StatelessWidget {
-  const Chargement({super.key});
+/// Données en cours de chargement : des blocs gris à la forme d'une liste, qui pulsent doucement.
+class Chargement extends StatefulWidget {
+  const Chargement({super.key, this.lignes = 6});
+  final int lignes;
   @override
-  Widget build(BuildContext context) =>
-      const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)));
+  State<Chargement> createState() => _ChargementState();
+}
+
+class _ChargementState extends State<Chargement> with SingleTickerProviderStateMixin {
+  late final AnimationController _pulsation = AnimationController(vsync: this, duration: const Duration(milliseconds: 700))
+    ..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _pulsation.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final couleur = context.c.bord.withValues(alpha: 0.8);
+    Widget bloc(double hauteur, {double? largeur}) => Container(
+          height: hauteur,
+          width: largeur,
+          decoration: BoxDecoration(color: couleur, borderRadius: BorderRadius.circular(4)),
+        );
+    // Sans animation si le téléphone demande de réduire les animations.
+    final animer = !MediaQuery.of(context).disableAnimations;
+    final contenu = Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          bloc(16, largeur: 150),
+          const SizedBox(height: 16),
+          for (var i = 0; i < widget.lignes; i++) ...[
+            if (i > 0) const SizedBox(height: 14),
+            Row(children: [
+              Expanded(
+                flex: 6,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  FractionallySizedBox(widthFactor: 0.9 - (i % 3) * 0.15, child: bloc(13)),
+                  const SizedBox(height: 7),
+                  FractionallySizedBox(widthFactor: 0.5, child: bloc(10)),
+                ]),
+              ),
+              const Spacer(flex: 2),
+              bloc(13, largeur: 44),
+            ]),
+          ],
+        ]),
+      ),
+    );
+    return Semantics(
+      label: 'Chargement',
+      liveRegion: true,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: animer ? FadeTransition(opacity: Tween(begin: 1.0, end: 0.5).animate(_pulsation), child: contenu) : contenu,
+      ),
+    );
+  }
 }
 
 class MessageErreur extends StatelessWidget {
@@ -207,10 +263,15 @@ class Vide extends StatelessWidget {
 }
 
 /// Charge une donnée et gère attente, erreur et rafraîchissement.
+///
+/// Si le téléphone garde une copie des données de l'écran, elle s'affiche aussitôt, avec une fine barre en
+/// haut, pendant que la version à jour arrive du serveur. Sinon, un squelette tient la place du contenu.
+/// [copieImmediate] est à désactiver pour un écran dont [charger] prépare un formulaire.
 class Charge<T> extends StatefulWidget {
-  const Charge({super.key, required this.charger, required this.construire});
+  const Charge({super.key, required this.charger, required this.construire, this.copieImmediate = true});
   final Future<T> Function() charger;
   final Widget Function(BuildContext context, T donnees, Future<void> Function() recharger) construire;
+  final bool copieImmediate;
 
   @override
   State<Charge<T>> createState() => _ChargeState<T>();
@@ -219,22 +280,50 @@ class Charge<T> extends StatefulWidget {
 class _ChargeState<T> extends State<Charge<T>> {
   late Future<T> _f;
 
+  /// Dernières données affichées (copie locale ou réponse précédente), montrées pendant une mise à jour.
+  T? _affichees;
+  bool _aDesDonnees = false;
+  int _demande = 0;
+
   @override
   void initState() {
     super.initState();
-    _f = widget.charger();
+    _lancer();
   }
 
   @override
   void didUpdateWidget(covariant Charge<T> old) {
     super.didUpdateWidget(old);
-    if (old.key != widget.key) _f = widget.charger();
+    if (old.key != widget.key) {
+      _aDesDonnees = false;
+      _lancer();
+    }
+  }
+
+  void _lancer() {
+    final n = ++_demande;
+    _f = widget.charger();
+    _f.then((d) {
+      if (n == _demande) {
+        _affichees = d;
+        _aDesDonnees = true;
+      }
+    }, onError: (_) {});
+    if (widget.copieImmediate && !_aDesDonnees) {
+      Api.i.copieSeulement(widget.charger).then((d) {
+        if (mounted && n == _demande && !_aDesDonnees) {
+          setState(() {
+            _affichees = d;
+            _aDesDonnees = true;
+          });
+        }
+      }, onError: (_) {});
+    }
   }
 
   Future<void> _recharger() async {
-    final f = widget.charger();
-    setState(() => _f = f);
-    await f.then((_) {}, onError: (_) {});
+    setState(_lancer);
+    await _f.then((_) {}, onError: (_) {});
   }
 
   @override
@@ -242,11 +331,17 @@ class _ChargeState<T> extends State<Charge<T>> {
     return FutureBuilder<T>(
       future: _f,
       builder: (context, s) {
-        if (s.connectionState != ConnectionState.done) return const Chargement();
-        if (s.hasError) {
+        final enCours = s.connectionState != ConnectionState.done;
+        if (enCours && !_aDesDonnees) return const Chargement();
+        if (!enCours && s.hasError) {
           return Padding(padding: const EdgeInsets.all(12), child: MessageErreur(s.error!, reessayer: _recharger));
         }
-        return widget.construire(context, s.data as T, _recharger);
+        // Données déjà connues : elles restent à l'écran, la barre signale la mise à jour en cours. La même
+        // structure est gardée à l'arrivée des données à jour, pour ne perdre ni le défilement ni la saisie.
+        return Stack(fit: StackFit.passthrough, children: [
+          widget.construire(context, enCours ? _affichees as T : s.data as T, _recharger),
+          if (enCours) const Positioned(top: 0, left: 0, right: 0, child: LinearProgressIndicator(minHeight: 2)),
+        ]);
       },
     );
   }

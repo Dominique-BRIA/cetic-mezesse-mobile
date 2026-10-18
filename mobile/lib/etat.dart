@@ -111,6 +111,7 @@ class Etat extends ChangeNotifier {
       await chargerAnnees();
       FileAttente.i.synchroniser();
       notifyListeners();
+      unawaited(prechargerEcrans());
     } on ErreurApi {
       // hors ligne : on garde la copie ; une session expirée est traitée par surSessionExpiree
     }
@@ -138,7 +139,27 @@ class Etat extends ChangeNotifier {
     await _garderProfil();
     notifyListeners();
     // Les années arrivent en arrière-plan : l'accueil s'ouvre sans les attendre.
-    unawaited(chargerAnnees().catchError((_) {}));
+    unawaited(chargerAnnees().then((_) => prechargerEcrans()).catchError((_) {}));
+  }
+
+  /// Données des écrans du menu, avec leurs filtres par défaut, mises en réserve en arrière-plan :
+  /// chaque écran s'ouvre ensuite aussitôt avec cette copie, puis se met à jour.
+  Future<void> prechargerEcrans() {
+    final direction = estProviseur || estSG;
+    return Api.i.precharger([
+      ('/notes/avancement', true),
+      if (estProf) ('/matieres', true),
+      if (direction) ...[
+        ('/classes', true),
+        ('/eleves?classeId=&q=', true),
+        ('/statistiques/etablissement?periode=S1', true),
+        ('/tableau-honneur?periode=T1', true),
+        ('/utilisateurs?role=PROFESSEUR', true),
+        ('/groupes', true),
+        ('/eleves?statut=RENVOYE', true),
+      ],
+      if (estProviseur) ('/attestations', false),
+    ]);
   }
 
   /// Profil modifié par l'utilisateur lui-même (écran Mon profil).
@@ -170,6 +191,7 @@ class Etat extends ChangeNotifier {
     Api.i.anneeId = id;
     await Api.i.prefs.setString('annee', id);
     notifyListeners();
+    unawaited(prechargerEcrans());
   }
 
   Future<void> basculerTheme(Brightness actuelle) async {

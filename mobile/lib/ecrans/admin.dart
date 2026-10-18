@@ -189,6 +189,8 @@ class _EcranParametresState extends State<EcranParametres> {
   Widget build(BuildContext context) {
     return Charge<bool>(
       charger: _charger,
+      // Le chargement remplit le formulaire : on attend la version du serveur.
+      copieImmediate: false,
       construire: (context, _, __) => Defilement(enfants: [
         Carte(
           titre: "Tableau d'honneur",
