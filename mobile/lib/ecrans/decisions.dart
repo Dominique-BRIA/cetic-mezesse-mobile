@@ -4,7 +4,7 @@ import '../api.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
-// Journal des décisions du SG (RG-30), réservé au Proviseur : désapprobation possible pendant 4 semaines.
+// Journal des décisions du SG (RG-30), réservé au Directeur : désapprobation possible pendant 4 semaines.
 
 const _domaines = {'ORGANISATION': 'Organisation', 'SCOLARITE': 'Scolarité', 'ADMINISTRATION': 'Administration'};
 const _statuts = [

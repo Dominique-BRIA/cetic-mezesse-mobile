@@ -24,6 +24,7 @@ class _EcranProfilState extends State<EcranProfil> {
   late final _email = TextEditingController(text: _u['email'] as String? ?? '');
   late final _discipline = TextEditingController(text: _u['discipline'] as String? ?? '');
   final _motDePasse = TextEditingController();
+  late String _sexe = _u['sexe'] as String? ?? '';
   bool _envoi = false;
   String? _erreur;
 
@@ -46,6 +47,7 @@ class _EcranProfilState extends State<EcranProfil> {
         'telephone': _telephone.text.trim(),
         'email': _email.text.trim(),
         'discipline': _discipline.text.trim(),
+        if (_sexe.isNotEmpty) 'sexe': _sexe,
         if (_identifiantChange) 'motDePasse': _motDePasse.text,
       }) as Map;
       await Etat.i.majProfil(maj.cast<String, dynamic>());
@@ -68,12 +70,25 @@ class _EcranProfilState extends State<EcranProfil> {
         backgroundColor: Colors.transparent,
         appBar: AppBar(title: const Text('Mon profil')),
         body: Defilement(enfants: [
-          Text('${roles[_u['role']] ?? ''} · vos informations, visibles par l\'administration.', style: TextStyle(color: context.c.encre2)),
+          Text('${libelleRole(_u)} · vos informations, visibles par l\'administration.', style: TextStyle(color: context.c.encre2)),
           const SizedBox(height: 8),
           Carte(
             titre: 'Informations',
             enfant: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               if (_erreur != null) ...[MessageErreur(_erreur!), const SizedBox(height: 12)],
+              Choix<String>(
+                libelle: 'Civilité',
+                valeur: _sexe,
+                options: const [('', '—'), ('M', 'M.'), ('F', 'Mme')],
+                changer: (v) => setState(() => _sexe = v ?? ''),
+              ),
+              if (_u['role'] == 'PROVISEUR')
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text('Imprimée sur les documents : « Le Directeur » ou « La Directrice ».',
+                      style: TextStyle(fontSize: 12, color: context.c.encre2)),
+                ),
+              const SizedBox(height: 12),
               TextField(controller: _prenom, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Prénom')),
               const SizedBox(height: 12),
               TextField(controller: _nom, textCapitalization: TextCapitalization.characters, decoration: const InputDecoration(labelText: 'Nom')),

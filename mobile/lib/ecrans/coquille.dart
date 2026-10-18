@@ -9,6 +9,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'accueil.dart';
 import 'admin.dart';
+import 'attestations.dart';
 import 'cartes.dart';
 import 'connexion.dart';
 import 'decisions.dart';
@@ -50,9 +51,11 @@ final destinations = <Destination>[
   Destination('bulletins', 'Bulletins', Icons.description_outlined, [_p, _sg], () => const EcranBulletins(), section: 'Évaluations'),
   Destination('statistiques', 'Statistiques', Icons.bar_chart, [_p, _sg], () => const EcranStatistiques(), section: 'Évaluations'),
   Destination('classement', 'Classement général', Icons.emoji_events_outlined, [_p, _sg], () => const EcranClassement(), section: 'Évaluations'),
+  Destination('tableau-honneur', "Tableau d'honneur", Icons.military_tech_outlined, [_p, _sg], () => const EcranTableauHonneur(), section: 'Évaluations'),
   Destination('decisions', 'Décisions prises', Icons.gavel, [_p], () => const EcranDecisions(), section: 'Administration'),
+  Destination('attestations', 'Attestations de présence', Icons.approval_outlined, [_p], () => const EcranAttestations(), section: 'Administration'),
   Destination('annees', 'Années et séquences', Icons.date_range_outlined, [_p, _sg], () => const EcranAnnees(), section: 'Administration'),
-  Destination('parametres', 'Paramètres', Icons.settings_outlined, [_sg], () => const EcranParametres(), section: 'Administration'),
+  Destination('parametres', 'Paramètres', Icons.settings_outlined, [_p, _sg], () => const EcranParametres(), section: 'Administration'),
 ];
 
 /// Permet aux écrans d'en ouvrir un autre (par exemple le tableau de bord vers la saisie).
@@ -247,7 +250,7 @@ class _Tiroir extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('${e.utilisateur?['prenom']} ${e.utilisateur?['nom']}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                      Text('${roles[e.role] ?? ''} · Mon profil', style: TextStyle(fontSize: 12, color: c.encre2)),
+                      Text('${libelleRole(e.utilisateur)} · Mon profil', style: TextStyle(fontSize: 12, color: c.encre2)),
                     ]),
                   ),
                 ),

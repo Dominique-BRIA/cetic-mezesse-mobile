@@ -434,3 +434,116 @@ class _EcranClassementState extends State<EcranClassement> {
     );
   }
 }
+
+// ---------------- Tableau d'honneur ----------------
+
+/// Élèves dont la moyenne de la période atteint le seuil réglé dans les Paramètres.
+class EcranTableauHonneur extends StatefulWidget {
+  const EcranTableauHonneur({super.key});
+  @override
+  State<EcranTableauHonneur> createState() => _EcranTableauHonneurState();
+}
+
+class _EcranTableauHonneurState extends State<EcranTableauHonneur> {
+  String _periode = 'T1';
+  String _classe = '';
+
+  String get _filtre => 'periode=$_periode${_classe.isEmpty ? '' : '&classeId=$_classe'}';
+
+  @override
+  Widget build(BuildContext context) {
+    return Charge<List<Map<String, dynamic>>>(
+      charger: chargerClasses,
+      construire: (context, classes, _) => Column(
+        children: [
+          _filtres([
+            ChoixPeriode(valeur: _periode, changer: (v) => setState(() => _periode = v)),
+            Choix<String>(
+              libelle: 'Classe',
+              valeur: _classe,
+              options: [('', 'Toutes les classes'), for (final k in classes) (k['id'] as String, k['nom'] as String)],
+              changer: (v) => setState(() => _classe = v ?? ''),
+            ),
+          ]),
+          Expanded(
+            child: Charge<Map>(
+              key: ValueKey(_filtre),
+              charger: () async => await Api.i.get('/tableau-honneur?$_filtre') as Map,
+              construire: (context, t, recharger) {
+                final c = context.c;
+                final total = t['total'] as int? ?? 0;
+                final avecEleves = (t['classes'] as List).cast<Map>().where((k) => (k['eleves'] as List).isNotEmpty).toList();
+                return Defilement(
+                  rafraichir: recharger,
+                  enfants: [
+                    Carte(
+                      enfant: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            '$total élève(s) au tableau d\'honneur · ${libellePeriode(_periode)} · ${t['annee']}',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Moyenne minimale : ${note(t['seuil'] as num?)}. Elle se règle dans les Paramètres.',
+                            style: TextStyle(color: c.encre2, fontSize: 13),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  icon: const Icon(Icons.description_outlined, size: 18),
+                                  label: const Text('Liste PDF'),
+                                  onPressed: total == 0 ? null : () => agir(context, () => Api.i.ouvrirDocument('/tableau-honneur/pdf?$_filtre&format=liste')),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: FilledButton.icon(
+                                  icon: const Icon(Icons.military_tech_outlined, size: 18),
+                                  label: const Text('Certificats'),
+                                  onPressed: total == 0
+                                      ? null
+                                      : () => agir(context, () => Api.i.ouvrirDocument('/tableau-honneur/pdf?$_filtre&format=certificats')),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (total == 0)
+                      Carte(
+                        enfant: Vide("Aucun élève au tableau d'honneur", texte: "Aucune moyenne n'atteint ${note(t['seuil'] as num?)} pour cette période."),
+                      ),
+                    for (final k in avecEleves)
+                      Carte(
+                        titre: '${k['nom']} · ${(k['eleves'] as List).length} sur ${k['effectif']}',
+                        sansMarge: true,
+                        enfant: Column(
+                          children: [
+                            for (final e in (k['eleves'] as List).cast<Map>())
+                              ListTile(
+                                leading: SizedBox(
+                                  width: 48,
+                                  child: Text(rang(e['rang'] as Map?), style: const TextStyle(fontWeight: FontWeight.w700)),
+                                ),
+                                title: Text('${e['nom']} ${e['prenoms']}'),
+                                subtitle: Text('${e['matricule']} · ${e['sexe']}'),
+                                trailing: Text(note(e['moyenne'] as num?), style: const TextStyle(fontWeight: FontWeight.w700)),
+                              ),
+                          ],
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

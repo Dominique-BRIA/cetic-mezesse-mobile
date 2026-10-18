@@ -18,11 +18,23 @@ String date(String? iso) {
 
 String nom(Map? p) => p == null ? '—' : '${p['nom']} ${p['prenoms'] ?? p['prenom'] ?? ''}'.trim();
 
-const roles = {
-  'PROVISEUR': 'Proviseur',
-  'SURVEILLANT_GENERAL': 'Surveillant Général',
-  'PROFESSEUR': 'Professeur',
-};
+const roles = {'PROVISEUR': 'Directeur', 'SURVEILLANT_GENERAL': 'Surveillant Général', 'PROFESSEUR': 'Professeur'};
+
+/// Au CETIC, le chef d'établissement est le Directeur, ou la Directrice si la civilité est « Mme ».
+String libelleRole(Map? u) {
+  final role = u?['role'] as String? ?? '';
+  return role == 'PROVISEUR' && u?['sexe'] == 'F' ? 'Directrice' : roles[role] ?? '';
+}
+
+/// « 2024-09-02T00:00:00.000Z » ou « 2024-09-02 » → date locale (sans heure) ; null si absent.
+DateTime? jour(String? iso) {
+  if (iso == null || iso.length < 10) return null;
+  final d = DateTime.tryParse(iso.substring(0, 10));
+  return d == null ? null : DateTime(d.year, d.month, d.day);
+}
+
+/// Date envoyée à l'API : « 2024-09-02 ».
+String? isoJour(DateTime? d) => d == null ? null : '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
 const periodes = [
   ('S1', 'Séquence 1'),

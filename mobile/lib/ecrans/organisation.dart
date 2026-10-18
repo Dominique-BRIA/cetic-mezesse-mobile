@@ -5,12 +5,14 @@ import '../etat.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'carriere.dart';
 
 Future<List<Map<String, dynamic>>> _profs() async =>
     (await Api.i.get('/utilisateurs?role=PROFESSEUR') as List).cast<Map<String, dynamic>>().where((p) => p['actif'] == true).toList();
 
 /// Formulaire générique en feuille du bas.
-Future<bool> feuilleFormulaire(BuildContext context, String titre, Widget Function(BuildContext, StateSetter) champs, Future<void> Function() enregistrer) async {
+Future<bool> feuilleFormulaire(BuildContext context, String titre, Widget Function(BuildContext, StateSetter) champs, Future<void> Function() enregistrer,
+    {String action = 'Enregistrer'}) async {
   final ok = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
@@ -28,7 +30,7 @@ Future<bool> feuilleFormulaire(BuildContext context, String titre, Widget Functi
               onPressed: () async {
                 if (await agir(ctx, enregistrer) && ctx.mounted) Navigator.pop(ctx, true);
               },
-              child: const Text('Enregistrer'),
+              child: Text(action),
             ),
           ]),
         ),
@@ -517,6 +519,7 @@ class _EcranEnseignantsState extends State<EcranEnseignants> {
       for (final k in ['nom', 'prenom', 'telephone', 'email', 'discipline']) k: TextEditingController(text: p?[k] as String? ?? ''),
     };
     var actif = p?['actif'] as bool? ?? true;
+    final carriere = Carriere.de(p);
     final ok = await feuilleFormulaire(
       context,
       p == null ? 'Nouvel enseignant' : 'Modifier ${p['prenom']} ${p['nom']}',
@@ -530,9 +533,22 @@ class _EcranEnseignantsState extends State<EcranEnseignants> {
           SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Compte actif'), value: actif, onChanged: (v) => maj(() => actif = v)),
         if (p == null)
           Text('Mot de passe provisoire : « password », à changer à la première connexion.', style: TextStyle(fontSize: 12.5, color: ctx.c.encre2)),
+        Padding(
+          padding: const EdgeInsets.only(top: 16, bottom: 4),
+          child: Text('Carrière', style: const TextStyle(fontWeight: FontWeight.w700)),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text("Imprimée sur l'attestation de présence effective au poste.", style: TextStyle(fontSize: 12.5, color: ctx.c.encre2)),
+        ),
+        ChampsCarriere(carriere, maj: maj),
       ]),
       () async {
-        final corps = {for (final MapEntry(:key, :value) in t.entries) key: value.text.trim(), 'actif': actif};
+        final corps = {
+          for (final MapEntry(:key, :value) in t.entries) key: value.text.trim(),
+          'actif': actif,
+          'carriere': carriere.corps(),
+        };
         p == null ? await Api.i.post('/utilisateurs', corps) : await Api.i.put('/utilisateurs/${p['id']}', corps);
       },
     );
@@ -573,7 +589,8 @@ class _EcranEnseignantsState extends State<EcranEnseignants> {
                     )
                   : null,
               enfant: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                if (p['discipline'] != null) Text(p['discipline'] as String, style: TextStyle(color: context.c.encre2)),
+                if (p['discipline'] != null || p['grade'] != null)
+                  Text([p['grade'], p['discipline']].whereType<String>().join(' · '), style: TextStyle(color: context.c.encre2)),
                 Text([p['telephone'], p['email']].whereType<String>().join(' · '), style: TextStyle(color: context.c.encre3, fontSize: 12.5)),
                 const SizedBox(height: 6),
                 for (final m in (p['matieres'] as List).cast<Map>()) Text('${m['nom']} · ${m['classe']['nom']}', style: const TextStyle(fontSize: 13.5)),
