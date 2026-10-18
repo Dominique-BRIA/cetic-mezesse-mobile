@@ -1,0 +1,1284 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Requêtes de la base de données - Gestion scolaire du CETIC de Mezesse</title>
+<link rel="stylesheet" href="style-documents.css">
+<style>
+  .requete { break-inside: avoid; margin: 10px 0 14px; }
+  .requete h4 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 3px; }
+  .op { flex: none; font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 1px 6px; border-radius: 3px; color: #fff; }
+  .op.lire { background: #1d5fa8; }
+  .op.ajouter { background: #1e764c; }
+  .op.modifier { background: #9a5a00; }
+  .op.supprimer { background: #b3261e; }
+  .quand { margin: 2px 0 4px; font-size: 9.5pt; color: #33415a; text-align: left; }
+  .note { margin: 4px 0 0; font-size: 9pt; color: #5b6676; font-style: italic; text-align: left; }
+  pre.sql { font-family: Consolas, "Courier New", monospace; font-size: 8.6pt; line-height: 1.45; background: #f4f8fc; border: 1px solid #d6e1ec; border-left: 3px solid #1d5fa8; border-radius: 4px; padding: 7px 10px; margin: 0; white-space: pre-wrap; word-break: break-word; }
+  pre.sql .mot { color: #154a85; font-weight: 700; }
+  pre.sql .param { color: #9a3412; }
+  pre.sql .chaine { color: #1e764c; }
+  pre.sql .com { color: #6b7684; font-style: italic; }
+  .tables { color: #4e5d70; font-size: 9.5pt; }
+  td.nb { text-align: center; width: 13%; }
+  .legende { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0; font-size: 9.5pt; }
+</style>
+</head>
+<body>
+
+<section class="garde">
+  <div>
+    <div class="drapeau"><div style="background:#007a5e"></div><div style="background:#ce1126"></div><div style="background:#fcd116"></div></div>
+    <div class="entete">
+      <div class="gauche"><b>RÉPUBLIQUE DU CAMEROUN</b><br><i>Paix – Travail – Patrie</i><br>Ministère des Enseignements Secondaires<br>DRES-Sud · DDES Dja-et-Lobo</div>
+      <img class="sceau" src="img/logo.png" alt="Emblème du CETIC de Mezesse">
+      <div class="droite"><b>REPUBLIC OF CAMEROON</b><br><i>Peace – Work – Fatherland</i><br>Ministry of Secondary Education<br>South RDSE · Dja and Lobo DDSE</div>
+    </div>
+    <h1>Requêtes de la base de données</h1>
+    <p class="sous">Toutes les lectures, ajouts, modifications et suppressions<br>faits par l'application de gestion scolaire du CETIC de Mezesse</p>
+    <span class="ue">Référence technique</span>
+  </div>
+  <div class="bas">
+    <table>
+      <tr><td style="width:40%"><b>Base de données</b></td><td>PostgreSQL (Neon en production)</td></tr>
+      <tr><td><b>Accès</b></td><td>API Spring Boot : JPA et Hibernate, migrations Flyway</td></tr>
+      <tr><td><b>Contenu</b></td><td>150 requêtes : 101 lectures, 19 ajouts, 17 modifications, 13 suppressions</td></tr>
+      <tr><td><b>Vérification</b></td><td>Chaque requête contrôlée sur la base par PostgreSQL (EXPLAIN) ; liste comparée au SQL réellement exécuté par l'API</td></tr>
+      <tr><td><b>Date</b></td><td>Octobre 2026</td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="chapitre sommaire">
+  <h2>Sommaire</h2>
+  <ol>
+    <li><span>1. Lire ce document</span></li>
+    <li><span>2. Les tables</span></li>
+    <li><span>3. Comptes et connexion</span></li>
+    <li><span>4. Établissement et barèmes</span></li>
+    <li><span>5. Années scolaires et séquences</span></li>
+    <li><span>6. Spécialités et classes</span></li>
+    <li><span>7. Groupes de matières</span></li>
+    <li><span>8. Matières</span></li>
+    <li><span>9. Élèves, inscriptions et renvois</span></li>
+    <li><span>10. Notes et compétences visées</span></li>
+    <li><span>11. Journal des décisions</span></li>
+    <li><span>12. Notifications</span></li>
+    <li><span>13. Attestations de présence effective au poste</span></li>
+    <li><span>14. Suppressions en cascade</span></li>
+    <li><span>15. Opérations en plusieurs requêtes</span></li>
+    <li><span>16. Démarrage : migrations et amorçage</span></li>
+  </ol>
+  <table>
+    <tr><th>Domaine</th><th class="nb">Lire</th><th class="nb">Ajouter</th><th class="nb">Modifier</th><th class="nb">Supprimer</th></tr>
+    <tr><td>3. Comptes et connexion</td><td class="nb">10</td><td class="nb">1</td><td class="nb">1</td><td class="nb">1</td></tr>
+    <tr><td>4. Établissement et barèmes</td><td class="nb">6</td><td class="nb">2</td><td class="nb">1</td><td class="nb">1</td></tr>
+    <tr><td>5. Années scolaires et séquences</td><td class="nb">11</td><td class="nb">2</td><td class="nb">3</td><td class="nb">1</td></tr>
+    <tr><td>6. Spécialités et classes</td><td class="nb">16</td><td class="nb">2</td><td class="nb">2</td><td class="nb">2</td></tr>
+    <tr><td>7. Groupes de matières</td><td class="nb">11</td><td class="nb">2</td><td class="nb">1</td><td class="nb">3</td></tr>
+    <tr><td>8. Matières</td><td class="nb">9</td><td class="nb">1</td><td class="nb">1</td><td class="nb">1</td></tr>
+    <tr><td>9. Élèves, inscriptions et renvois</td><td class="nb">22</td><td class="nb">4</td><td class="nb">3</td><td class="nb">2</td></tr>
+    <tr><td>10. Notes et compétences visées</td><td class="nb">8</td><td class="nb">2</td><td class="nb">2</td><td class="nb">2</td></tr>
+    <tr><td>11. Journal des décisions</td><td class="nb">4</td><td class="nb">1</td><td class="nb">1</td><td class="nb">—</td></tr>
+    <tr><td>12. Notifications</td><td class="nb">2</td><td class="nb">1</td><td class="nb">2</td><td class="nb">—</td></tr>
+    <tr><td>13. Attestations de présence effective au poste</td><td class="nb">2</td><td class="nb">1</td><td class="nb">—</td><td class="nb">—</td></tr>
+    <tr><th>Total</th><th class="nb">101</th><th class="nb">19</th><th class="nb">17</th><th class="nb">13</th></tr>
+  </table>
+</section>
+
+<section class="chapitre">
+  <h2>1. Lire ce document</h2>
+  <p>Seule l'API (dépôt <code>cetic-mezesse-backend</code>) parle à la base : le site web et l'application mobile passent par elle. L'API utilise <b>JPA</b> avec <b>Hibernate</b>, qui écrit le SQL à partir des entités Java et des méthodes des dépôts (<code>repository/</code>). Ce document donne, pour chaque requête, ce qu'elle fait, <b>quand</b> elle s'exécute (action dans l'application et route de l'API) et son <b>SQL</b>.</p>
+  <h3>Comment lire le SQL</h3>
+  <ul>
+    <li><b>Noms entre guillemets.</b> Les tables et les colonnes gardent leurs majuscules (<code>"Classe"</code>, <code>"anneeId"</code>) : PostgreSQL exige alors des guillemets. Les noms tout en minuscules (<code>nom</code>, <code>id</code>) s'en passent.</li>
+    <li><b>Paramètres.</b> <code>:anneeId</code>, <code>:ids</code>… sont les valeurs fournies par l'application ; Hibernate les envoie comme paramètres (<code>?</code>), jamais collées dans le texte, ce qui empêche toute injection SQL. <code>IN (:ids)</code> reçoit une liste.</li>
+    <li><b>Forme simplifiée.</b> Le SQL est écrit pour être lu : <code>SELECT *</code> remplace la liste des colonnes qu'Hibernate énumère, et les alias sont courts. Les conditions, tris et colonnes écrites sont celles qu'envoie l'API. Pour quelques recherches par clé étrangère (compter les notes d'une matière, lire les notifications d'un compte…), Hibernate passe par une jointure sur la table liée et filtre sur son <code>id</code> au lieu de filtrer la colonne directement : le résultat est le même.</li>
+    <li><b>Identifiants.</b> Les identifiants (<code>id</code>) sont générés par l'application (format cuid, par exemple <code>cmvdtysczlku7c13ej18jpaub</code>), pas par la base.</li>
+    <li><b>Énumérations.</b> Le rôle (<code>PROVISEUR</code> pour le Directeur, <code>SURVEILLANT_GENERAL</code>, <code>PROFESSEUR</code>), le statut d'une inscription (<code>ACTIF</code>, <code>RENVOYE</code>), le sexe (<code>M</code>, <code>F</code>) et le type de barème (<code>GRADE</code>, <code>COTE</code>) sont des types énumérés PostgreSQL.</li>
+  </ul>
+  <div class="legende"><span><span class="op lire">Lire</span> SELECT</span><span><span class="op ajouter">Ajouter</span> INSERT</span><span><span class="op modifier">Modifier</span> UPDATE</span><span><span class="op supprimer">Supprimer</span> DELETE</span></div>
+  <h3>Ce qu'Hibernate ajoute de lui-même</h3>
+  <ul>
+    <li><b>Chargements groupés.</b> Quand une page affiche des objets liés (le professeur de chaque matière, l'année de chaque classe…), Hibernate les lit d'un coup, jusqu'à 100 à la fois : <code>SELECT * FROM "Utilisateur" WHERE id = ANY(:ids)</code>. Cela vaut pour toutes les tables et n'est pas répété dans chaque section.</li>
+    <li><b>Mises à jour complètes.</b> Un <code>UPDATE</code> réécrit toutes les colonnes de la ligne, même celles qui ne changent pas.</li>
+    <li><b>Transactions.</b> Chaque action de l'utilisateur s'exécute dans une transaction : toutes ses requêtes réussissent ensemble, ou aucune n'est gardée (chapitre 15).</li>
+  </ul>
+  <h3>Comment ce document a été vérifié</h3>
+  <ul>
+    <li>Chaque requête a été soumise à PostgreSQL avec <code>EXPLAIN</code> sur une copie de la base : syntaxe, tables, colonnes et types sont corrects (150 sur 150).</li>
+    <li>Le SQL réellement envoyé par l'API a été enregistré pendant un parcours de toutes ses routes (lectures, écritures, envois de fichiers, désapprobations) ; chaque instruction enregistrée correspond à une requête de ce document.</li>
+  </ul>
+</section>
+
+<section class="chapitre">
+  <h2>2. Les tables</h2>
+  <table>
+    <tr><th style="width:24%">Table</th><th>Contenu</th><th style="width:30%">Unicité</th></tr>
+    <tr><td><code>Utilisateur</code></td><td>Comptes : Directeur, SG, professeurs ; carrière pour les attestations</td><td>téléphone, e-mail, matricule</td></tr>
+    <tr><td><code>Etablissement</code></td><td>Une seule ligne : en-tête des documents, préfixe des matricules, seuil du tableau d'honneur</td><td>—</td></tr>
+    <tr><td><code>Bareme</code></td><td>Mentions des grades et des cotes, avec leur note minimale</td><td>(type, libellé)</td></tr>
+    <tr><td><code>AnneeScolaire</code></td><td>Années scolaires, dont une en cours</td><td>libellé</td></tr>
+    <tr><td><code>Sequence</code></td><td>Six séquences par année, saisie ouverte ou fermée</td><td>(année, numéro)</td></tr>
+    <tr><td><code>Specialite</code></td><td>Spécialités communes à toutes les années</td><td>nom</td></tr>
+    <tr><td><code>Classe</code></td><td>Classes d'une année, avec spécialité et professeur principal</td><td>(année, nom)</td></tr>
+    <tr><td><code>GroupeMatiere</code></td><td>Groupes de matières d'une année</td><td>(année, nom)</td></tr>
+    <tr><td><code>_ClasseToGroupeMatiere</code></td><td>Rattachement des groupes aux classes (A : classe, B : groupe)</td><td>(A, B)</td></tr>
+    <tr><td><code>Matiere</code></td><td>Matières d'une classe : groupe, coefficient, ordre, professeur</td><td>(classe, nom)</td></tr>
+    <tr><td><code>Eleve</code></td><td>Fiche de l'élève, photo, parent</td><td>matricule, matricule national</td></tr>
+    <tr><td><code>Inscription</code></td><td>L'élève dans une classe pour une année ; statut actif ou renvoyé</td><td>(élève, année)</td></tr>
+    <tr><td><code>Renvoi</code></td><td>Renvois et réintégrations</td><td>—</td></tr>
+    <tr><td><code>Note</code></td><td>Notes sur 20</td><td>(inscription, matière, séquence)</td></tr>
+    <tr><td><code>CompetenceVisee</code></td><td>Compétence visée d'une matière pour une séquence</td><td>(matière, séquence)</td></tr>
+    <tr><td><code>Compteur</code></td><td>Compteurs des matricules et des numéros d'attestation</td><td>clé</td></tr>
+    <tr><td><code>Decision</code></td><td>Journal des décisions du SG et de leurs désapprobations</td><td>—</td></tr>
+    <tr><td><code>Notification</code></td><td>Messages de la cloche</td><td>—</td></tr>
+    <tr><td><code>Attestation</code></td><td>Registre des attestations de présence effective au poste</td><td>référence</td></tr>
+    <tr><td><code>flyway_schema_history</code></td><td>Migrations appliquées (tenue par Flyway, voir chapitre 16)</td><td>—</td></tr>
+    <tr><td><code>_prisma_migrations</code></td><td>Historique de l'ancienne API Node ; n'est plus lue ni écrite</td><td>—</td></tr>
+  </table>
+</section>
+
+<section class="chapitre">
+  <h2>3. Comptes et connexion</h2>
+  <p>Un compte par personne : le Directeur (rôle PROVISEUR dans la base), le Surveillant Général et les professeurs. Le mot de passe n'est jamais stocké en clair : la colonne motDePasse contient son empreinte bcrypt.</p>
+  <p class="tables">Tables : <code>Utilisateur</code></p>
+  <h3>Lire</h3>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R1. Trouver le compte qui se connecte</h4>
+    <p class="quand"><b>Quand :</b> Connexion (POST /api/auth/connexion). Le même identifiant peut être un e-mail ou un téléphone.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Utilisateur" u
+<span class="mot">WHERE</span> u.email = <span class="param">:identifiant</span> <span class="mot">OR</span> u.telephone = <span class="param">:identifiant</span>
+<span class="mot">ORDER BY</span> u."creeLe";</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R2. Lire un compte par son identifiant</h4>
+    <p class="quand"><b>Quand :</b> À chaque requête authentifiée (le compte du jeton doit encore être actif), puis dans la plupart des actions qui concernent une personne : Mon profil, fiche d'un enseignant, carrière, attestation, désapprobation.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Utilisateur" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R3. Lister tous les comptes</h4>
+    <p class="quand"><b>Quand :</b> Liste des personnels sans filtre (GET /api/utilisateurs), par exemple pour choisir le bénéficiaire d'une attestation.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Utilisateur" <span class="mot">ORDER BY</span> role, nom, prenom;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R4. Lister les comptes d'un rôle</h4>
+    <p class="quand"><b>Quand :</b> Page Enseignants (GET /api/utilisateurs?role=PROFESSEUR) ; titre « Directeur » ou « Directrice » imprimé sur les documents (rôle PROVISEUR).</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Utilisateur" <span class="mot">WHERE</span> role = <span class="param">:role</span> <span class="mot">ORDER BY</span> nom, prenom;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R5. Compter les comptes actifs d'un rôle</h4>
+    <p class="quand"><b>Quand :</b> Statistiques de l'établissement : nombre d'enseignants.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Utilisateur" <span class="mot">WHERE</span> role = <span class="param">:role</span> <span class="mot">AND</span> actif = <span class="mot">true</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R6. Savoir si un compte de ce rôle existe</h4>
+    <p class="quand"><b>Quand :</b> Amorçage d'une base vide : le Directeur et le SG ne sont créés qu'une fois.</p>
+    <pre class="sql"><span class="mot">SELECT</span> u.id <span class="mot">FROM</span> "Utilisateur" u <span class="mot">WHERE</span> u.role = <span class="param">:role</span> <span class="mot">LIMIT</span> 1;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R7. Vérifier qu'un téléphone est libre</h4>
+    <p class="quand"><b>Quand :</b> Création d'un enseignant, modification de sa fiche, Mon profil : un téléphone ne sert qu'à un seul compte.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Utilisateur" u
+<span class="mot">WHERE</span> u.id &lt;&gt; <span class="param">:id</span> <span class="mot">AND</span> u.telephone = <span class="param">:telephone</span>
+<span class="mot">LIMIT</span> 1;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R8. Vérifier qu'un e-mail est libre</h4>
+    <p class="quand"><b>Quand :</b> Mêmes actions, pour l'adresse e-mail.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Utilisateur" u
+<span class="mot">WHERE</span> u.id &lt;&gt; <span class="param">:id</span> <span class="mot">AND</span> u.email = <span class="param">:email</span>
+<span class="mot">LIMIT</span> 1;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R9. Vérifier qu'un matricule de la fonction publique est libre</h4>
+    <p class="quand"><b>Quand :</b> Carrière d'un personnel (fiche enseignant, nouvelle attestation).</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Utilisateur" u
+<span class="mot">WHERE</span> u.id &lt;&gt; <span class="param">:id</span> <span class="mot">AND</span> u.matricule = <span class="param">:matricule</span>
+<span class="mot">LIMIT</span> 1;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R10. Professeurs actifs qui enseignent dans l'année</h4>
+    <p class="quand"><b>Quand :</b> Ouverture d'une séquence : ces professeurs reçoivent une notification.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">DISTINCT</span> p.id
+<span class="mot">FROM</span> "Matiere" m
+<span class="mot">JOIN</span> "Classe" c <span class="mot">ON</span> c.id = m."classeId"
+<span class="mot">JOIN</span> "Utilisateur" p <span class="mot">ON</span> p.id = m."professeurId"
+<span class="mot">WHERE</span> c."anneeId" = <span class="param">:anneeId</span> <span class="mot">AND</span> p.role = <span class="param">:role</span> <span class="mot">AND</span> p.actif = <span class="mot">true</span>;</pre>
+  </div>
+  <h3>Ajouter</h3>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R11. Créer un compte</h4>
+    <p class="quand"><b>Quand :</b> Nouvel enseignant (POST /api/utilisateurs), avec le mot de passe provisoire « password » ; amorçage d'une base vide (Directeur et SG).</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "Utilisateur" (id, nom, prenom, telephone, email, "motDePasse", role, actif,
+  "doitChangerMotDePasse", discipline, sexe, matricule, grade, fonction, "datePriseService",
+  "dateEntreeFonctionPublique", "acteNomination", "creeLe", "majLe")
+<span class="mot">VALUES</span> (<span class="param">:id</span>, <span class="param">:nom</span>, <span class="param">:prenom</span>, <span class="param">:telephone</span>, <span class="param">:email</span>, <span class="param">:motDePasse</span>, <span class="param">:role</span>, <span class="param">:actif</span>,
+  <span class="param">:doitChangerMotDePasse</span>, <span class="param">:discipline</span>, <span class="param">:sexe</span>, <span class="param">:matricule</span>, <span class="param">:grade</span>, <span class="param">:fonction</span>, <span class="param">:datePriseService</span>,
+  <span class="param">:dateEntreeFonctionPublique</span>, <span class="param">:acteNomination</span>, <span class="param">:creeLe</span>, <span class="param">:majLe</span>);</pre>
+  </div>
+  <h3>Modifier</h3>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R12. Mettre à jour un compte</h4>
+    <p class="quand"><b>Quand :</b> Modifier la fiche d'un enseignant ou sa carrière, le désactiver ou le réactiver, réinitialiser son mot de passe ; Mon profil (dont la civilité) ; changer son mot de passe ; désapprobation qui remet l'état précédent.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "Utilisateur"
+<span class="mot">SET</span> nom = <span class="param">:nom</span>, prenom = <span class="param">:prenom</span>, telephone = <span class="param">:telephone</span>, email = <span class="param">:email</span>,
+    "motDePasse" = <span class="param">:motDePasse</span>, role = <span class="param">:role</span>, actif = <span class="param">:actif</span>,
+    "doitChangerMotDePasse" = <span class="param">:doitChangerMotDePasse</span>, discipline = <span class="param">:discipline</span>,
+    sexe = <span class="param">:sexe</span>, matricule = <span class="param">:matricule</span>, grade = <span class="param">:grade</span>, fonction = <span class="param">:fonction</span>,
+    "datePriseService" = <span class="param">:datePriseService</span>, "dateEntreeFonctionPublique" = <span class="param">:dateEntreeFonctionPublique</span>,
+    "acteNomination" = <span class="param">:acteNomination</span>, "majLe" = <span class="param">:majLe</span>
+<span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+    <p class="note">Hibernate réécrit toutes les colonnes de la ligne, même celles qui ne changent pas.</p>
+  </div>
+  <h3>Supprimer</h3>
+  <div class="requete">
+    <h4><span class="op supprimer">Supprimer</span> R13. Supprimer un compte</h4>
+    <p class="quand"><b>Quand :</b> Uniquement quand le Directeur désapprouve la création d'un enseignant, et seulement s'il n'a encore saisi aucune note (voir « Compter les notes saisies par un compte »).</p>
+    <pre class="sql"><span class="mot">DELETE FROM</span> "Utilisateur" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+    <p class="note">Ses notifications et les attestations dont il est bénéficiaire partent avec lui ; il n'est plus professeur principal ni professeur des matières (champ remis à vide). La base refuse la suppression s'il est l'auteur de notes, de décisions, de renvois ou d'attestations délivrées.</p>
+  </div>
+</section>
+
+<section class="chapitre">
+  <h2>4. Établissement et barèmes</h2>
+  <p>L'établissement tient sur une seule ligne (id = 1) : ce qui s'imprime en tête des documents, le préfixe des matricules et la moyenne minimale du tableau d'honneur. Les barèmes donnent les grades par matière (GRADE) et les cotes de la moyenne générale (COTE).</p>
+  <p class="tables">Tables : <code>Etablissement</code>, <code>Bareme</code></p>
+  <h3>Lire</h3>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R14. Lire l'établissement</h4>
+    <p class="quand"><b>Quand :</b> Paramètres ; en-tête de chaque PDF (bulletins, listes, cartes, attestations, certificats) ; préfixe des matricules à l'inscription d'un élève ; seuil du tableau d'honneur.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Etablissement" <span class="mot">WHERE</span> id = 1;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R15. Savoir si l'établissement existe</h4>
+    <p class="quand"><b>Quand :</b> Amorçage d'une base vide.</p>
+    <pre class="sql"><span class="mot">SELECT</span> e.id <span class="mot">FROM</span> "Etablissement" e <span class="mot">WHERE</span> e.id = 1 <span class="mot">LIMIT</span> 1;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R16. Lire les barèmes, triés</h4>
+    <p class="quand"><b>Quand :</b> Paramètres (GET /api/baremes).</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Bareme" <span class="mot">ORDER BY</span> type, min <span class="mot">DESC</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R17. Lire tous les barèmes</h4>
+    <p class="quand"><b>Quand :</b> Calcul des résultats : relevé de notes, bulletins, statistiques, tableau d'honneur.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Bareme";</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R18. Lire un barème</h4>
+    <p class="quand"><b>Quand :</b> Avant de le remplacer : l'ancien est gardé dans le journal des décisions pour pouvoir le rétablir.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Bareme" <span class="mot">WHERE</span> type = <span class="param">:type</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R19. Compter les barèmes</h4>
+    <p class="quand"><b>Quand :</b> Amorçage d'une base vide.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Bareme";</pre>
+  </div>
+  <h3>Ajouter</h3>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R20. Créer l'établissement</h4>
+    <p class="quand"><b>Quand :</b> Amorçage d'une base vide (une seule fois).</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "Etablissement" (id, "nomFr", "nomEn", sigle, "sigleEn", "regionFr", "regionEn",
+  "departementFr", "departementEn", arrondissement, localite, code, "boitePostale", telephone,
+  "prefixeMatricule", "seuilTableauHonneur")
+<span class="mot">VALUES</span> (1, <span class="param">:nomFr</span>, <span class="param">:nomEn</span>, <span class="param">:sigle</span>, <span class="param">:sigleEn</span>, <span class="param">:regionFr</span>, <span class="param">:regionEn</span>, <span class="param">:departementFr</span>, <span class="param">:departementEn</span>,
+  <span class="param">:arrondissement</span>, <span class="param">:localite</span>, <span class="param">:code</span>, <span class="param">:boitePostale</span>, <span class="param">:telephone</span>, <span class="param">:prefixeMatricule</span>, <span class="param">:seuilTableauHonneur</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R21. Ajouter une mention</h4>
+    <p class="quand"><b>Quand :</b> Une fois par mention du nouveau barème ; amorçage (barèmes par défaut).</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "Bareme" (id, type, libelle, "libelleLong", min)
+<span class="mot">VALUES</span> (<span class="param">:id</span>, <span class="param">:type</span>, <span class="param">:libelle</span>, <span class="param">:libelleLong</span>, <span class="param">:min</span>);</pre>
+  </div>
+  <h3>Modifier</h3>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R22. Mettre à jour l'établissement</h4>
+    <p class="quand"><b>Quand :</b> Paramètres : informations de l'établissement (PUT /api/etablissement, SG) ou moyenne minimale du tableau d'honneur (PUT /api/etablissement/tableau-honneur, Directeur ou SG) ; désapprobation.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "Etablissement"
+<span class="mot">SET</span> "nomFr" = <span class="param">:nomFr</span>, "nomEn" = <span class="param">:nomEn</span>, sigle = <span class="param">:sigle</span>, "sigleEn" = <span class="param">:sigleEn</span>,
+    "regionFr" = <span class="param">:regionFr</span>, "regionEn" = <span class="param">:regionEn</span>, "departementFr" = <span class="param">:departementFr</span>,
+    "departementEn" = <span class="param">:departementEn</span>, arrondissement = <span class="param">:arrondissement</span>, localite = <span class="param">:localite</span>,
+    code = <span class="param">:code</span>, "boitePostale" = <span class="param">:boitePostale</span>, telephone = <span class="param">:telephone</span>,
+    "prefixeMatricule" = <span class="param">:prefixeMatricule</span>, "seuilTableauHonneur" = <span class="param">:seuilTableauHonneur</span>
+<span class="mot">WHERE</span> id = 1;</pre>
+  </div>
+  <h3>Supprimer</h3>
+  <div class="requete">
+    <h4><span class="op supprimer">Supprimer</span> R23. Supprimer un barème entier</h4>
+    <p class="quand"><b>Quand :</b> Remplacer le barème des grades ou des cotes (PUT /api/baremes/{type}) ; désapprobation qui rétablit l'ancien. Les nouvelles mentions sont ajoutées juste après.</p>
+    <pre class="sql"><span class="mot">DELETE FROM</span> "Bareme" <span class="mot">WHERE</span> type = <span class="param">:type</span>;</pre>
+  </div>
+</section>
+
+<section class="chapitre">
+  <h2>5. Années scolaires et séquences</h2>
+  <p>Une année compte six séquences, deux par trimestre. Une seule année est « en cours » (active) ; c'est elle que l'application utilise quand aucune année n'est choisie.</p>
+  <p class="tables">Tables : <code>AnneeScolaire</code>, <code>Sequence</code></p>
+  <h3>Lire</h3>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R24. Lister les années</h4>
+    <p class="quand"><b>Quand :</b> Menu « Année scolaire », page Années et séquences (GET /api/annees).</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "AnneeScolaire" <span class="mot">ORDER BY</span> libelle <span class="mot">DESC</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R25. Compter les classes de chaque année</h4>
+    <p class="quand"><b>Quand :</b> Page Années et séquences.</p>
+    <pre class="sql"><span class="mot">SELECT</span> c."anneeId", <span class="mot">count</span>(*) <span class="mot">FROM</span> "Classe" c <span class="mot">GROUP BY</span> c."anneeId";</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R26. Compter les inscriptions de chaque année</h4>
+    <p class="quand"><b>Quand :</b> Page Années et séquences.</p>
+    <pre class="sql"><span class="mot">SELECT</span> i."anneeId", <span class="mot">count</span>(*) <span class="mot">FROM</span> "Inscription" i <span class="mot">GROUP BY</span> i."anneeId";</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R27. Lire l'année en cours</h4>
+    <p class="quand"><b>Quand :</b> Toute requête qui ne précise pas d'année ; création d'une année ; attestation (année imprimée).</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "AnneeScolaire" <span class="mot">WHERE</span> active = <span class="mot">true</span> <span class="mot">LIMIT</span> 1;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R28. Chercher une autre année en cours</h4>
+    <p class="quand"><b>Quand :</b> Activer une année : l'ancienne année en cours est gardée dans le journal.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "AnneeScolaire" <span class="mot">WHERE</span> active = <span class="mot">true</span> <span class="mot">AND</span> id &lt;&gt; <span class="param">:id</span> <span class="mot">LIMIT</span> 1;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R29. Lire une année par son identifiant</h4>
+    <p class="quand"><b>Quand :</b> Année choisie dans le menu, activation, création de classes et de groupes, documents, tableau d'honneur.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "AnneeScolaire" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R30. Compter les années</h4>
+    <p class="quand"><b>Quand :</b> Amorçage d'une base vide.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "AnneeScolaire";</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R31. Lire les séquences d'une année</h4>
+    <p class="quand"><b>Quand :</b> Avancement de la saisie (tableau de bord).</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Sequence" <span class="mot">WHERE</span> "anneeId" = <span class="param">:anneeId</span> <span class="mot">ORDER BY</span> numero;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R32. Lire les séquences de plusieurs années</h4>
+    <p class="quand"><b>Quand :</b> Page Années et séquences.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Sequence" <span class="mot">WHERE</span> "anneeId" <span class="mot">IN</span> (<span class="param">:anneeIds</span>) <span class="mot">ORDER BY</span> numero;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R33. Lire une séquence</h4>
+    <p class="quand"><b>Quand :</b> Feuille de notes, élèves sans note, ouverture ou fermeture de la saisie.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Sequence" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R34. Compter les inscriptions d'une année</h4>
+    <p class="quand"><b>Quand :</b> Avant de supprimer une année : une année où des élèves sont inscrits ne peut pas être retirée.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Inscription" <span class="mot">WHERE</span> "anneeId" = <span class="param">:anneeId</span>;</pre>
+  </div>
+  <h3>Ajouter</h3>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R35. Créer une année</h4>
+    <p class="quand"><b>Quand :</b> Nouvelle année (POST /api/annees) ; amorçage.</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "AnneeScolaire" (id, libelle, active, "creeLe")
+<span class="mot">VALUES</span> (<span class="param">:id</span>, <span class="param">:libelle</span>, <span class="param">:active</span>, <span class="param">:creeLe</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R36. Créer une séquence</h4>
+    <p class="quand"><b>Quand :</b> Six fois à la création d'une année (numéros 1 à 6, trimestres 1 à 3).</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "Sequence" (id, "anneeId", numero, trimestre, "saisieOuverte")
+<span class="mot">VALUES</span> (<span class="param">:id</span>, <span class="param">:anneeId</span>, <span class="param">:numero</span>, <span class="param">:trimestre</span>, <span class="mot">false</span>);</pre>
+  </div>
+  <h3>Modifier</h3>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R37. Mettre à jour une année</h4>
+    <p class="quand"><b>Quand :</b> Rendre une année active (POST /api/annees/{id}/activer) ; désapprobation.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "AnneeScolaire" <span class="mot">SET</span> active = <span class="param">:active</span>, libelle = <span class="param">:libelle</span> <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R38. Désactiver les autres années</h4>
+    <p class="quand"><b>Quand :</b> Juste après l'activation d'une année : une seule reste en cours.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "AnneeScolaire" <span class="mot">SET</span> active = <span class="mot">false</span> <span class="mot">WHERE</span> id &lt;&gt; <span class="param">:id</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R39. Ouvrir ou fermer la saisie</h4>
+    <p class="quand"><b>Quand :</b> Années et séquences (PATCH /api/annees/sequences/{id}) ; désapprobation.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "Sequence"
+<span class="mot">SET</span> "anneeId" = <span class="param">:anneeId</span>, numero = <span class="param">:numero</span>, trimestre = <span class="param">:trimestre</span>, "saisieOuverte" = <span class="param">:saisieOuverte</span>
+<span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <h3>Supprimer</h3>
+  <div class="requete">
+    <h4><span class="op supprimer">Supprimer</span> R40. Supprimer une année</h4>
+    <p class="quand"><b>Quand :</b> Uniquement quand le Directeur désapprouve la création d'une année, si aucun élève n'y est inscrit.</p>
+    <pre class="sql"><span class="mot">DELETE FROM</span> "AnneeScolaire" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+    <p class="note">Ses séquences, classes (avec leurs matières), groupes de matières et inscriptions sont supprimés avec elle par la base.</p>
+  </div>
+</section>
+
+<section class="chapitre">
+  <h2>6. Spécialités et classes</h2>
+  <p>Les spécialités (Mécanique, Électricité…) servent d'une année sur l'autre. Une classe appartient à une année ; son nom se calcule à partir du niveau, de la spécialité et d'une lettre A, B… quand le niveau et la spécialité comptent plusieurs classes (colonne numero).</p>
+  <p class="tables">Tables : <code>Specialite</code>, <code>Classe</code></p>
+  <h3>Lire</h3>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R41. Lister les spécialités</h4>
+    <p class="quand"><b>Quand :</b> Fenêtre Spécialités, formulaire de classe (GET /api/specialites).</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Specialite" <span class="mot">ORDER BY</span> nom;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R42. Compter les classes de chaque spécialité</h4>
+    <p class="quand"><b>Quand :</b> Fenêtre Spécialités (une spécialité utilisée ne peut pas être supprimée).</p>
+    <pre class="sql"><span class="mot">SELECT</span> c."specialiteId", <span class="mot">count</span>(*) <span class="mot">FROM</span> "Classe" c
+<span class="mot">WHERE</span> c."specialiteId" <span class="mot">IS</span> <span class="mot">NOT</span> <span class="mot">NULL</span>
+<span class="mot">GROUP BY</span> c."specialiteId";</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R43. Compter les classes d'une spécialité</h4>
+    <p class="quand"><b>Quand :</b> Avant de modifier ou de supprimer une spécialité.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Classe" <span class="mot">WHERE</span> "specialiteId" = <span class="param">:specialiteId</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R44. Lire une spécialité</h4>
+    <p class="quand"><b>Quand :</b> Création ou modification d'une classe, d'une spécialité ; désapprobation.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Specialite" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R45. Années et niveaux des classes d'une spécialité</h4>
+    <p class="quand"><b>Quand :</b> Renommer une spécialité : les classes qui la portent sont renommées, groupe par groupe.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">DISTINCT</span> c."anneeId", c.niveau <span class="mot">FROM</span> "Classe" c <span class="mot">WHERE</span> c."specialiteId" = <span class="param">:specialiteId</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R46. Lister les classes de l'année</h4>
+    <p class="quand"><b>Quand :</b> Page Classes et tous les choix de classe (GET /api/classes) ; copie de l'organisation vers une nouvelle année.</p>
+    <pre class="sql"><span class="mot">SELECT</span> c.*, s.*, u.*
+<span class="mot">FROM</span> "Classe" c
+<span class="mot">LEFT</span> <span class="mot">JOIN</span> "Specialite" s <span class="mot">ON</span> s.id = c."specialiteId"
+<span class="mot">LEFT</span> <span class="mot">JOIN</span> "Utilisateur" u <span class="mot">ON</span> u.id = c."profPrincipalId"
+<span class="mot">WHERE</span> c."anneeId" = <span class="param">:anneeId</span>
+<span class="mot">ORDER BY</span> c.niveau, s.nom, c.numero;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R47. Lister les classes d'un professeur</h4>
+    <p class="quand"><b>Quand :</b> Un professeur ne voit que les classes où il enseigne (GET /api/classes).</p>
+    <pre class="sql"><span class="mot">SELECT</span> c.*, s.*, u.*
+<span class="mot">FROM</span> "Classe" c
+<span class="mot">LEFT</span> <span class="mot">JOIN</span> "Specialite" s <span class="mot">ON</span> s.id = c."specialiteId"
+<span class="mot">LEFT</span> <span class="mot">JOIN</span> "Utilisateur" u <span class="mot">ON</span> u.id = c."profPrincipalId"
+<span class="mot">WHERE</span> c."anneeId" = <span class="param">:anneeId</span>
+  <span class="mot">AND</span> <span class="mot">EXISTS</span> (<span class="mot">SELECT</span> 1 <span class="mot">FROM</span> "Matiere" m <span class="mot">WHERE</span> m."classeId" = c.id <span class="mot">AND</span> m."professeurId" = <span class="param">:professeurId</span>)
+<span class="mot">ORDER BY</span> c.niveau, s.nom, c.numero;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R48. Lister les classes de l'année par niveau et nom</h4>
+    <p class="quand"><b>Quand :</b> Statistiques de l'établissement, tableau d'honneur.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Classe" <span class="mot">WHERE</span> "anneeId" = <span class="param">:anneeId</span> <span class="mot">ORDER BY</span> niveau, nom;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R49. Lire des classes choisies</h4>
+    <p class="quand"><b>Quand :</b> Bulletins de classes entières (POST /api/documents/bulletins).</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Classe" <span class="mot">WHERE</span> id <span class="mot">IN</span> (<span class="param">:ids</span>) <span class="mot">ORDER BY</span> niveau, nom;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R50. Lire plusieurs classes</h4>
+    <p class="quand"><b>Quand :</b> Création ou modification d'un groupe (ses classes) ; désapprobation.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Classe" <span class="mot">WHERE</span> id <span class="mot">IN</span> (<span class="param">:ids</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R51. Lire une classe</h4>
+    <p class="quand"><b>Quand :</b> Fiche, modification ou suppression d'une classe ; liste et relevé d'une classe ; résultats ; inscription d'un élève.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Classe" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R52. Vérifier qu'une classe est de l'année</h4>
+    <p class="quand"><b>Quand :</b> Création d'une matière.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Classe" <span class="mot">WHERE</span> id = <span class="param">:id</span> <span class="mot">AND</span> "anneeId" = <span class="param">:anneeId</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R53. Classes qui partagent les lettres A, B…</h4>
+    <p class="quand"><b>Quand :</b> Création, modification ou suppression d'une classe : les classes du même niveau et de la même spécialité sont renommées.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Classe" c
+<span class="mot">WHERE</span> c."anneeId" = <span class="param">:anneeId</span> <span class="mot">AND</span> c.niveau = <span class="param">:niveau</span>
+  <span class="mot">AND</span> ((<span class="param">:specialiteId</span> <span class="mot">IS</span> <span class="mot">NULL</span> <span class="mot">AND</span> c."specialiteId" <span class="mot">IS</span> <span class="mot">NULL</span>) <span class="mot">OR</span> c."specialiteId" = <span class="param">:specialiteId</span>)
+<span class="mot">ORDER BY</span> c.numero, c.nom;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R54. Plus grand numéro du groupe</h4>
+    <p class="quand"><b>Quand :</b> Nouvelle classe : elle prend le numéro suivant (lettre suivante).</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">coalesce</span>(<span class="mot">max</span>(c.numero), 0) <span class="mot">FROM</span> "Classe" c
+<span class="mot">WHERE</span> c."anneeId" = <span class="param">:anneeId</span> <span class="mot">AND</span> c.niveau = <span class="param">:niveau</span>
+  <span class="mot">AND</span> ((<span class="param">:specialiteId</span> <span class="mot">IS</span> <span class="mot">NULL</span> <span class="mot">AND</span> c."specialiteId" <span class="mot">IS</span> <span class="mot">NULL</span>) <span class="mot">OR</span> c."specialiteId" = <span class="param">:specialiteId</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R55. Classes dont des professeurs sont principaux</h4>
+    <p class="quand"><b>Quand :</b> Page Enseignants.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Classe" c <span class="mot">WHERE</span> c."anneeId" = <span class="param">:anneeId</span> <span class="mot">AND</span> c."profPrincipalId" <span class="mot">IN</span> (<span class="param">:professeurIds</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R56. Compter les inscriptions d'une classe</h4>
+    <p class="quand"><b>Quand :</b> Avant de supprimer une classe : une classe avec des élèves ne peut pas être supprimée.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Inscription" <span class="mot">WHERE</span> "classeId" = <span class="param">:classeId</span>;</pre>
+  </div>
+  <h3>Ajouter</h3>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R57. Créer une spécialité</h4>
+    <p class="quand"><b>Quand :</b> Fenêtre Spécialités (POST /api/specialites) ; désapprobation d'une suppression.</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "Specialite" (id, nom, "nomEn", "creeLe") <span class="mot">VALUES</span> (<span class="param">:id</span>, <span class="param">:nom</span>, <span class="param">:nomEn</span>, <span class="param">:creeLe</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R58. Créer une classe</h4>
+    <p class="quand"><b>Quand :</b> Nouvelle classe (POST /api/classes) ; nouvelle année avec reprise de l'organisation ; désapprobation d'une suppression.</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "Classe" (id, "anneeId", nom, "nomEn", niveau, numero, "specialiteId", "profPrincipalId")
+<span class="mot">VALUES</span> (<span class="param">:id</span>, <span class="param">:anneeId</span>, <span class="param">:nom</span>, <span class="param">:nomEn</span>, <span class="param">:niveau</span>, <span class="param">:numero</span>, <span class="param">:specialiteId</span>, <span class="param">:profPrincipalId</span>);</pre>
+  </div>
+  <h3>Modifier</h3>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R59. Renommer une spécialité</h4>
+    <p class="quand"><b>Quand :</b> PUT /api/specialites/{id} ; désapprobation.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "Specialite" <span class="mot">SET</span> nom = <span class="param">:nom</span>, "nomEn" = <span class="param">:nomEn</span> <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R60. Mettre à jour une classe</h4>
+    <p class="quand"><b>Quand :</b> Modifier une classe (PUT /api/classes/{id}) ; renommage automatique des classes voisines (lettres) ; désapprobation.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "Classe"
+<span class="mot">SET</span> "anneeId" = <span class="param">:anneeId</span>, nom = <span class="param">:nom</span>, "nomEn" = <span class="param">:nomEn</span>, niveau = <span class="param">:niveau</span>, numero = <span class="param">:numero</span>,
+    "specialiteId" = <span class="param">:specialiteId</span>, "profPrincipalId" = <span class="param">:profPrincipalId</span>
+<span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <h3>Supprimer</h3>
+  <div class="requete">
+    <h4><span class="op supprimer">Supprimer</span> R61. Supprimer une spécialité</h4>
+    <p class="quand"><b>Quand :</b> DELETE /api/specialites/{id}, si aucune classe ne la porte ; désapprobation d'une création.</p>
+    <pre class="sql"><span class="mot">DELETE FROM</span> "Specialite" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+    <p class="note">La base refuse la suppression tant qu'une classe porte la spécialité.</p>
+  </div>
+  <div class="requete">
+    <h4><span class="op supprimer">Supprimer</span> R62. Supprimer une classe</h4>
+    <p class="quand"><b>Quand :</b> DELETE /api/classes/{id}, si aucun élève n'y est inscrit ; désapprobation d'une création. Ses matières sont d'abord supprimées une à une (voir Matières).</p>
+    <pre class="sql"><span class="mot">DELETE FROM</span> "Classe" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+    <p class="note">Ses rattachements aux groupes de matières disparaissent avec elle. La base refuse la suppression si une inscription la référence.</p>
+  </div>
+</section>
+
+<section class="chapitre">
+  <h2>7. Groupes de matières</h2>
+  <p>Un groupe (matières générales, professionnelles…) regroupe les matières sur le bulletin. Il est rattaché aux classes qui l'utilisent par la table de liaison _ClasseToGroupeMatiere (colonne A : la classe, colonne B : le groupe).</p>
+  <p class="tables">Tables : <code>GroupeMatiere</code>, <code>_ClasseToGroupeMatiere</code></p>
+  <h3>Lire</h3>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R63. Lister les groupes de l'année</h4>
+    <p class="quand"><b>Quand :</b> Page Groupes de matières (GET /api/groupes) ; copie vers une nouvelle année.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "GroupeMatiere" <span class="mot">WHERE</span> "anneeId" = <span class="param">:anneeId</span> <span class="mot">ORDER BY</span> ordre;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R64. Classes rattachées à des groupes</h4>
+    <p class="quand"><b>Quand :</b> Page Groupes de matières.</p>
+    <pre class="sql"><span class="mot">SELECT</span> cg."B" <span class="mot">AS</span> "groupeId", c.*
+<span class="mot">FROM</span> "_ClasseToGroupeMatiere" cg
+<span class="mot">JOIN</span> "Classe" c <span class="mot">ON</span> c.id = cg."A"
+<span class="mot">WHERE</span> cg."B" <span class="mot">IN</span> (<span class="param">:groupeIds</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R65. Groupes rattachés à des classes</h4>
+    <p class="quand"><b>Quand :</b> Page Classes ; fiche d'une classe ; copie vers une nouvelle année.</p>
+    <pre class="sql"><span class="mot">SELECT</span> cg."A" <span class="mot">AS</span> "classeId", g.*
+<span class="mot">FROM</span> "_ClasseToGroupeMatiere" cg
+<span class="mot">JOIN</span> "GroupeMatiere" g <span class="mot">ON</span> g.id = cg."B"
+<span class="mot">WHERE</span> cg."A" <span class="mot">IN</span> (<span class="param">:classeIds</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R66. Compter les matières de chaque groupe</h4>
+    <p class="quand"><b>Quand :</b> Page Groupes de matières.</p>
+    <pre class="sql"><span class="mot">SELECT</span> m."groupeId", <span class="mot">count</span>(*) <span class="mot">FROM</span> "Matiere" m <span class="mot">WHERE</span> m."groupeId" <span class="mot">IN</span> (<span class="param">:groupeIds</span>) <span class="mot">GROUP BY</span> m."groupeId";</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R67. Lire un groupe</h4>
+    <p class="quand"><b>Quand :</b> Modification ou suppression d'un groupe ; feuille de notes ; désapprobation.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "GroupeMatiere" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R68. Lire plusieurs groupes</h4>
+    <p class="quand"><b>Quand :</b> Désapprobation de la suppression d'une classe : ses rattachements sont rétablis.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "GroupeMatiere" <span class="mot">WHERE</span> id <span class="mot">IN</span> (<span class="param">:ids</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R69. Le groupe est-il rattaché à la classe ?</h4>
+    <p class="quand"><b>Quand :</b> Création ou modification d'une matière : son groupe doit être rattaché à sa classe.</p>
+    <pre class="sql"><span class="mot">SELECT</span> g.id
+<span class="mot">FROM</span> "GroupeMatiere" g
+<span class="mot">JOIN</span> "_ClasseToGroupeMatiere" cg <span class="mot">ON</span> cg."B" = g.id
+<span class="mot">WHERE</span> g.id = <span class="param">:groupeId</span> <span class="mot">AND</span> cg."A" = <span class="param">:classeId</span>
+<span class="mot">LIMIT</span> 1;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R70. Compter les matières du groupe</h4>
+    <p class="quand"><b>Quand :</b> Avant de supprimer un groupe (il doit être vide) ; désapprobation.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Matiere" <span class="mot">WHERE</span> "groupeId" = <span class="param">:groupeId</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R71. Matières du groupe hors des classes gardées</h4>
+    <p class="quand"><b>Quand :</b> Modifier les classes d'un groupe : on ne peut pas retirer une classe dont des matières sont dans le groupe.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Matiere" m <span class="mot">WHERE</span> m."groupeId" = <span class="param">:groupeId</span> <span class="mot">AND</span> m."classeId" <span class="mot">NOT</span> <span class="mot">IN</span> (<span class="param">:classeIds</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R72. Noms des classes qui bloquent</h4>
+    <p class="quand"><b>Quand :</b> Même vérification : le message d'erreur cite ces classes.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">DISTINCT</span> c.nom
+<span class="mot">FROM</span> "Matiere" m
+<span class="mot">JOIN</span> "Classe" c <span class="mot">ON</span> c.id = m."classeId"
+<span class="mot">WHERE</span> m."groupeId" = <span class="param">:groupeId</span> <span class="mot">AND</span> m."classeId" <span class="mot">NOT</span> <span class="mot">IN</span> (<span class="param">:classeIds</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R73. Matières du groupe dans des classes données</h4>
+    <p class="quand"><b>Quand :</b> Désapprobation de la modification d'un groupe.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Matiere" m <span class="mot">WHERE</span> m."groupeId" = <span class="param">:groupeId</span> <span class="mot">AND</span> m."classeId" <span class="mot">IN</span> (<span class="param">:classeIds</span>);</pre>
+  </div>
+  <h3>Ajouter</h3>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R74. Créer un groupe</h4>
+    <p class="quand"><b>Quand :</b> Nouveau groupe (POST /api/groupes) ; nouvelle année avec reprise de l'organisation ; désapprobation d'une suppression.</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "GroupeMatiere" (id, "anneeId", nom, "nomEn", ordre)
+<span class="mot">VALUES</span> (<span class="param">:id</span>, <span class="param">:anneeId</span>, <span class="param">:nom</span>, <span class="param">:nomEn</span>, <span class="param">:ordre</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R75. Rattacher une classe au groupe</h4>
+    <p class="quand"><b>Quand :</b> Une fois par classe, à la création ou à la modification du groupe.</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "_ClasseToGroupeMatiere" ("A", "B") <span class="mot">VALUES</span> (<span class="param">:classeId</span>, <span class="param">:groupeId</span>);</pre>
+  </div>
+  <h3>Modifier</h3>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R76. Mettre à jour un groupe</h4>
+    <p class="quand"><b>Quand :</b> PUT /api/groupes/{id} ; désapprobation.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "GroupeMatiere" <span class="mot">SET</span> "anneeId" = <span class="param">:anneeId</span>, nom = <span class="param">:nom</span>, "nomEn" = <span class="param">:nomEn</span>, ordre = <span class="param">:ordre</span> <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <h3>Supprimer</h3>
+  <div class="requete">
+    <h4><span class="op supprimer">Supprimer</span> R77. Détacher une classe d'un groupe</h4>
+    <p class="quand"><b>Quand :</b> Modification du groupe (classe retirée) ; désapprobation.</p>
+    <pre class="sql"><span class="mot">DELETE FROM</span> "_ClasseToGroupeMatiere" <span class="mot">WHERE</span> "B" = <span class="param">:groupeId</span> <span class="mot">AND</span> "A" = <span class="param">:classeId</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op supprimer">Supprimer</span> R78. Détacher toutes les classes du groupe</h4>
+    <p class="quand"><b>Quand :</b> Juste avant la suppression du groupe.</p>
+    <pre class="sql"><span class="mot">DELETE FROM</span> "_ClasseToGroupeMatiere" <span class="mot">WHERE</span> "B" = <span class="param">:groupeId</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op supprimer">Supprimer</span> R79. Supprimer un groupe</h4>
+    <p class="quand"><b>Quand :</b> DELETE /api/groupes/{id}, s'il ne contient plus de matière ; désapprobation d'une création.</p>
+    <pre class="sql"><span class="mot">DELETE FROM</span> "GroupeMatiere" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+    <p class="note">La base refuse la suppression tant qu'une matière est rangée dans le groupe.</p>
+  </div>
+</section>
+
+<section class="chapitre">
+  <h2>8. Matières</h2>
+  <p>Une matière appartient à une classe et à un groupe rattaché à cette classe ; elle a un coefficient, un ordre sur le bulletin et au plus un professeur.</p>
+  <p class="tables">Tables : <code>Matiere</code></p>
+  <h3>Lire</h3>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R80. Lister les matières de l'année</h4>
+    <p class="quand"><b>Quand :</b> Page Matières (filtre par classe), matières d'un professeur (saisie des notes, statistiques de ses matières) : GET /api/matieres.</p>
+    <pre class="sql"><span class="mot">SELECT</span> m.*, c.*, g.*, p.*
+<span class="mot">FROM</span> "Matiere" m
+<span class="mot">JOIN</span> "Classe" c <span class="mot">ON</span> c.id = m."classeId"
+<span class="mot">JOIN</span> "GroupeMatiere" g <span class="mot">ON</span> g.id = m."groupeId"
+<span class="mot">LEFT</span> <span class="mot">JOIN</span> "Utilisateur" p <span class="mot">ON</span> p.id = m."professeurId"
+<span class="mot">WHERE</span> c."anneeId" = <span class="param">:anneeId</span>
+  <span class="mot">AND</span> (<span class="param">:classeId</span> <span class="mot">IS</span> <span class="mot">NULL</span> <span class="mot">OR</span> c.id = <span class="param">:classeId</span>)
+  <span class="mot">AND</span> (<span class="param">:professeurId</span> <span class="mot">IS</span> <span class="mot">NULL</span> <span class="mot">OR</span> m."professeurId" = <span class="param">:professeurId</span>)
+<span class="mot">ORDER BY</span> c.niveau, g.ordre, m.ordre;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R81. Matières suivies pour la saisie</h4>
+    <p class="quand"><b>Quand :</b> Tableau de bord (avancement de la saisie) ; élèves sans note.</p>
+    <pre class="sql"><span class="mot">SELECT</span> m.*, c.*, p.*
+<span class="mot">FROM</span> "Matiere" m
+<span class="mot">JOIN</span> "Classe" c <span class="mot">ON</span> c.id = m."classeId"
+<span class="mot">LEFT</span> <span class="mot">JOIN</span> "Utilisateur" p <span class="mot">ON</span> p.id = m."professeurId"
+<span class="mot">WHERE</span> c."anneeId" = <span class="param">:anneeId</span>
+  <span class="mot">AND</span> (<span class="param">:matiereId</span> <span class="mot">IS</span> <span class="mot">NULL</span> <span class="mot">OR</span> m.id = <span class="param">:matiereId</span>)
+  <span class="mot">AND</span> (<span class="param">:classeId</span> <span class="mot">IS</span> <span class="mot">NULL</span> <span class="mot">OR</span> c.id = <span class="param">:classeId</span>)
+  <span class="mot">AND</span> (<span class="param">:professeurId</span> <span class="mot">IS</span> <span class="mot">NULL</span> <span class="mot">OR</span> m."professeurId" = <span class="param">:professeurId</span>)
+<span class="mot">ORDER BY</span> c.niveau, m.ordre;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R82. Matières d'une classe pour le calcul</h4>
+    <p class="quand"><b>Quand :</b> Relevé de notes, bulletins, statistiques, tableau d'honneur : tout ce qu'il faut pour calculer les résultats d'une classe.</p>
+    <pre class="sql"><span class="mot">SELECT</span> m.*, g.*, p.*
+<span class="mot">FROM</span> "Matiere" m
+<span class="mot">JOIN</span> "GroupeMatiere" g <span class="mot">ON</span> g.id = m."groupeId"
+<span class="mot">LEFT</span> <span class="mot">JOIN</span> "Utilisateur" p <span class="mot">ON</span> p.id = m."professeurId"
+<span class="mot">WHERE</span> m."classeId" = <span class="param">:classeId</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R83. Matières d'une classe</h4>
+    <p class="quand"><b>Quand :</b> Avant de supprimer une classe (ses matières partent avec elle) ; désapprobation.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Matiere" <span class="mot">WHERE</span> "classeId" = <span class="param">:classeId</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R84. Matières de plusieurs classes</h4>
+    <p class="quand"><b>Quand :</b> Nouvelle année avec reprise de l'organisation.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Matiere" <span class="mot">WHERE</span> "classeId" <span class="mot">IN</span> (<span class="param">:classeIds</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R85. Matières enseignées par des professeurs</h4>
+    <p class="quand"><b>Quand :</b> Page Enseignants (matières et classes de chacun).</p>
+    <pre class="sql"><span class="mot">SELECT</span> m.*, c.*
+<span class="mot">FROM</span> "Matiere" m
+<span class="mot">JOIN</span> "Classe" c <span class="mot">ON</span> c.id = m."classeId"
+<span class="mot">WHERE</span> c."anneeId" = <span class="param">:anneeId</span> <span class="mot">AND</span> m."professeurId" <span class="mot">IN</span> (<span class="param">:professeurIds</span>)
+<span class="mot">ORDER BY</span> c.niveau;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R86. Compter les matières de chaque classe</h4>
+    <p class="quand"><b>Quand :</b> Page Classes.</p>
+    <pre class="sql"><span class="mot">SELECT</span> m."classeId", <span class="mot">count</span>(*) <span class="mot">FROM</span> "Matiere" m <span class="mot">WHERE</span> m."classeId" <span class="mot">IN</span> (<span class="param">:classeIds</span>) <span class="mot">GROUP BY</span> m."classeId";</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R87. Lire une matière</h4>
+    <p class="quand"><b>Quand :</b> Modification ou suppression ; feuille de notes (le professeur doit être celui de la matière).</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Matiere" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R88. Compter les notes d'une matière</h4>
+    <p class="quand"><b>Quand :</b> Avant de modifier ou de supprimer une matière : une matière notée demande une confirmation et ne change plus de classe.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Note" <span class="mot">WHERE</span> "matiereId" = <span class="param">:matiereId</span>;</pre>
+  </div>
+  <h3>Ajouter</h3>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R89. Créer une matière</h4>
+    <p class="quand"><b>Quand :</b> Nouvelle matière (POST /api/matieres) ; nouvelle année avec reprise de l'organisation ; désapprobation d'une suppression.</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "Matiere" (id, "classeId", "groupeId", nom, "nomEn", coefficient, ordre, "professeurId")
+<span class="mot">VALUES</span> (<span class="param">:id</span>, <span class="param">:classeId</span>, <span class="param">:groupeId</span>, <span class="param">:nom</span>, <span class="param">:nomEn</span>, <span class="param">:coefficient</span>, <span class="param">:ordre</span>, <span class="param">:professeurId</span>);</pre>
+  </div>
+  <h3>Modifier</h3>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R90. Mettre à jour une matière</h4>
+    <p class="quand"><b>Quand :</b> PUT /api/matieres/{id} ; désapprobation.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "Matiere"
+<span class="mot">SET</span> "classeId" = <span class="param">:classeId</span>, "groupeId" = <span class="param">:groupeId</span>, nom = <span class="param">:nom</span>, "nomEn" = <span class="param">:nomEn</span>,
+    coefficient = <span class="param">:coefficient</span>, ordre = <span class="param">:ordre</span>, "professeurId" = <span class="param">:professeurId</span>
+<span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <h3>Supprimer</h3>
+  <div class="requete">
+    <h4><span class="op supprimer">Supprimer</span> R91. Supprimer une matière</h4>
+    <p class="quand"><b>Quand :</b> DELETE /api/matieres/{id} (avec confirmation si elle a des notes) ; suppression d'une classe (une fois par matière) ; désapprobation d'une création.</p>
+    <pre class="sql"><span class="mot">DELETE FROM</span> "Matiere" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+    <p class="note">Ses notes et ses compétences visées sont supprimées avec elle par la base.</p>
+  </div>
+</section>
+
+<section class="chapitre">
+  <h2>9. Élèves, inscriptions et renvois</h2>
+  <p>Un élève a une fiche (Eleve) et une inscription par année (Inscription), dans une classe. Les notes et les renvois portent sur l'inscription : c'est ce qui permet de réinscrire un élève l'année suivante sans perdre son historique. Le matricule est attribué par un compteur.</p>
+  <p class="tables">Tables : <code>Eleve</code>, <code>Inscription</code>, <code>Renvoi</code>, <code>Compteur</code></p>
+  <h3>Lire</h3>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R92. Lister les élèves de l'année</h4>
+    <p class="quand"><b>Quand :</b> Page Élèves, élèves renvoyés, réinscriptions (GET /api/eleves). Les conditions entre crochets ne sont ajoutées que si le filtre est donné : statut (ACTIF par défaut, RENVOYE ou TOUS), classe, recherche.</p>
+    <pre class="sql"><span class="mot">SELECT</span> i.*, e.*, c.*, a.*
+<span class="mot">FROM</span> "Inscription" i
+<span class="mot">JOIN</span> "Eleve" e <span class="mot">ON</span> e.id = i."eleveId"
+<span class="mot">JOIN</span> "Classe" c <span class="mot">ON</span> c.id = i."classeId"
+<span class="mot">JOIN</span> "AnneeScolaire" a <span class="mot">ON</span> a.id = i."anneeId"
+<span class="mot">WHERE</span> i."anneeId" = <span class="param">:anneeId</span>
+  <span class="mot">AND</span> i.statut = <span class="param">:statut</span>                      <span class="com">-- [statut]</span>
+  <span class="mot">AND</span> c.id = <span class="param">:classeId</span>                        <span class="com">-- [classe]</span>
+  <span class="mot">AND</span> (<span class="mot">lower</span>(e.nom) <span class="mot">LIKE</span> <span class="param">:motif</span> <span class="mot">ESCAPE</span> <span class="chaine">'\'</span>    <span class="com">-- [recherche : « %texte% »]</span>
+    <span class="mot">OR</span> <span class="mot">lower</span>(e.prenoms) <span class="mot">LIKE</span> <span class="param">:motif</span> <span class="mot">ESCAPE</span> <span class="chaine">'\'</span>
+    <span class="mot">OR</span> <span class="mot">lower</span>(e.matricule) <span class="mot">LIKE</span> <span class="param">:motif</span> <span class="mot">ESCAPE</span> <span class="chaine">'\'</span>
+    <span class="mot">OR</span> <span class="mot">lower</span>(e."matriculeNational") <span class="mot">LIKE</span> <span class="param">:motif</span> <span class="mot">ESCAPE</span> <span class="chaine">'\'</span>)
+<span class="mot">ORDER BY</span> c.niveau, e.nom, e.prenoms;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R93. Renvois des élèves listés</h4>
+    <p class="quand"><b>Quand :</b> Même page, et fiche de l'élève : le dernier renvoi de chacun, avec son auteur.</p>
+    <pre class="sql"><span class="mot">SELECT</span> r.*, p.*, rp.*
+<span class="mot">FROM</span> "Renvoi" r
+<span class="mot">JOIN</span> "Utilisateur" p <span class="mot">ON</span> p.id = r."parId"
+<span class="mot">LEFT</span> <span class="mot">JOIN</span> "Utilisateur" rp <span class="mot">ON</span> rp.id = r."reintegreParId"
+<span class="mot">WHERE</span> r."inscriptionId" <span class="mot">IN</span> (<span class="param">:inscriptionIds</span>)
+<span class="mot">ORDER BY</span> r."creeLe" <span class="mot">DESC</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R94. Élèves actifs d'une classe</h4>
+    <p class="quand"><b>Quand :</b> Feuille de notes, liste de classe (PDF, Excel), relevé, calcul des résultats.</p>
+    <pre class="sql"><span class="mot">SELECT</span> i.*, e.*
+<span class="mot">FROM</span> "Inscription" i
+<span class="mot">JOIN</span> "Eleve" e <span class="mot">ON</span> e.id = i."eleveId"
+<span class="mot">WHERE</span> i."classeId" = <span class="param">:classeId</span> <span class="mot">AND</span> i.statut = <span class="chaine">'ACTIF'</span>
+<span class="mot">ORDER BY</span> e.nom, e.prenoms;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R95. Élèves sans note</h4>
+    <p class="quand"><b>Quand :</b> Élèves sans note d'une matière pour une séquence (GET /api/notes/manquantes).</p>
+    <pre class="sql"><span class="mot">SELECT</span> i.*, e.*
+<span class="mot">FROM</span> "Inscription" i
+<span class="mot">JOIN</span> "Eleve" e <span class="mot">ON</span> e.id = i."eleveId"
+<span class="mot">WHERE</span> i."classeId" = <span class="param">:classeId</span> <span class="mot">AND</span> i.statut = <span class="chaine">'ACTIF'</span>
+  <span class="mot">AND</span> <span class="mot">NOT</span> <span class="mot">EXISTS</span> (<span class="mot">SELECT</span> 1 <span class="mot">FROM</span> "Note" n
+                  <span class="mot">WHERE</span> n."inscriptionId" = i.id <span class="mot">AND</span> n."matiereId" = <span class="param">:matiereId</span> <span class="mot">AND</span> n."sequenceId" = <span class="param">:sequenceId</span>)
+<span class="mot">ORDER BY</span> e.nom, e.prenoms;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R96. Inscriptions encore actives dans la classe</h4>
+    <p class="quand"><b>Quand :</b> Enregistrement d'une feuille de notes : chaque note doit viser un élève actif de la classe.</p>
+    <pre class="sql"><span class="mot">SELECT</span> i.id <span class="mot">FROM</span> "Inscription" i
+<span class="mot">WHERE</span> i.id <span class="mot">IN</span> (<span class="param">:ids</span>) <span class="mot">AND</span> i."classeId" = <span class="param">:classeId</span> <span class="mot">AND</span> i.statut = <span class="chaine">'ACTIF'</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R97. Inscriptions actives choisies</h4>
+    <p class="quand"><b>Quand :</b> Bulletins d'élèves choisis un à un.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Inscription" i <span class="mot">WHERE</span> i.id <span class="mot">IN</span> (<span class="param">:ids</span>) <span class="mot">AND</span> i.statut = <span class="chaine">'ACTIF'</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R98. Élèves pour les cartes scolaires</h4>
+    <p class="quand"><b>Quand :</b> Cartes scolaires et vérification des photos : classes entières et élèves choisis.</p>
+    <pre class="sql"><span class="mot">SELECT</span> i.*, e.*, c.*, a.*
+<span class="mot">FROM</span> "Inscription" i
+<span class="mot">JOIN</span> "Eleve" e <span class="mot">ON</span> e.id = i."eleveId"
+<span class="mot">JOIN</span> "Classe" c <span class="mot">ON</span> c.id = i."classeId"
+<span class="mot">JOIN</span> "AnneeScolaire" a <span class="mot">ON</span> a.id = i."anneeId"
+<span class="mot">WHERE</span> i.statut = <span class="chaine">'ACTIF'</span> <span class="mot">AND</span> (c.id <span class="mot">IN</span> (<span class="param">:classeIds</span>) <span class="mot">OR</span> i.id <span class="mot">IN</span> (<span class="param">:inscriptionIds</span>))
+<span class="mot">ORDER BY</span> c.niveau, c.nom, e.nom, e.prenoms;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R99. Élèves déjà inscrits dans l'année</h4>
+    <p class="quand"><b>Quand :</b> Réinscription : un élève ne peut pas être inscrit deux fois la même année.</p>
+    <pre class="sql"><span class="mot">SELECT</span> i."eleveId" <span class="mot">FROM</span> "Inscription" i <span class="mot">WHERE</span> i."anneeId" = <span class="param">:anneeId</span> <span class="mot">AND</span> i."eleveId" <span class="mot">IN</span> (<span class="param">:eleveIds</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R100. Parcours d'un élève</h4>
+    <p class="quand"><b>Quand :</b> Fiche de l'élève : ses inscriptions, de la plus récente à la plus ancienne.</p>
+    <pre class="sql"><span class="mot">SELECT</span> i.*, c.*, a.*
+<span class="mot">FROM</span> "Inscription" i
+<span class="mot">JOIN</span> "Classe" c <span class="mot">ON</span> c.id = i."classeId"
+<span class="mot">JOIN</span> "AnneeScolaire" a <span class="mot">ON</span> a.id = i."anneeId"
+<span class="mot">WHERE</span> i."eleveId" = <span class="param">:eleveId</span>
+<span class="mot">ORDER BY</span> a.libelle <span class="mot">DESC</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R101. Inscription d'un élève pour une année</h4>
+    <p class="quand"><b>Quand :</b> Modification de la fiche (changement de classe).</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Inscription" <span class="mot">WHERE</span> "eleveId" = <span class="param">:eleveId</span> <span class="mot">AND</span> "anneeId" = <span class="param">:anneeId</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R102. Lire une inscription</h4>
+    <p class="quand"><b>Quand :</b> Renvoyer, réintégrer ; désapprobation.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Inscription" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R103. Effectif actif de chaque classe</h4>
+    <p class="quand"><b>Quand :</b> Page Classes.</p>
+    <pre class="sql"><span class="mot">SELECT</span> i."classeId", <span class="mot">count</span>(*) <span class="mot">FROM</span> "Inscription" i
+<span class="mot">WHERE</span> i."classeId" <span class="mot">IN</span> (<span class="param">:classeIds</span>) <span class="mot">AND</span> i.statut = <span class="chaine">'ACTIF'</span>
+<span class="mot">GROUP BY</span> i."classeId";</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R104. Effectif actif des classes de l'année</h4>
+    <p class="quand"><b>Quand :</b> Tableau de bord (avancement de la saisie).</p>
+    <pre class="sql"><span class="mot">SELECT</span> i."classeId", <span class="mot">count</span>(*) <span class="mot">FROM</span> "Inscription" i
+<span class="mot">WHERE</span> i."anneeId" = <span class="param">:anneeId</span> <span class="mot">AND</span> i.statut = <span class="chaine">'ACTIF'</span>
+<span class="mot">GROUP BY</span> i."classeId";</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R105. Effectif actif d'une classe</h4>
+    <p class="quand"><b>Quand :</b> Élèves sans note.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Inscription" <span class="mot">WHERE</span> "classeId" = <span class="param">:classeId</span> <span class="mot">AND</span> statut = <span class="param">:statut</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R106. Élèves de l'année par statut</h4>
+    <p class="quand"><b>Quand :</b> Statistiques de l'établissement : effectif, élèves renvoyés.</p>
+    <pre class="sql"><span class="mot">SELECT</span> i.statut, <span class="mot">count</span>(*) <span class="mot">FROM</span> "Inscription" i <span class="mot">WHERE</span> i."anneeId" = <span class="param">:anneeId</span> <span class="mot">GROUP BY</span> i.statut;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R107. Lire un élève</h4>
+    <p class="quand"><b>Quand :</b> Fiche de l'élève, photo, modification ; désapprobation.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Eleve" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R108. Lire plusieurs élèves</h4>
+    <p class="quand"><b>Quand :</b> Photos de plusieurs élèves ; réinscription.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Eleve" <span class="mot">WHERE</span> id <span class="mot">IN</span> (<span class="param">:ids</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R109. Élèves qui ont une photo</h4>
+    <p class="quand"><b>Quand :</b> Désapprobation d'un ajout d'élèves : leurs photos sont aussi effacées du stockage.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Eleve" <span class="mot">WHERE</span> id <span class="mot">IN</span> (<span class="param">:ids</span>) <span class="mot">AND</span> "photoCle" <span class="mot">IS</span> <span class="mot">NOT</span> <span class="mot">NULL</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R110. Renvoi en cours</h4>
+    <p class="quand"><b>Quand :</b> Réintégrer : le renvoi le plus récent qui n'est pas encore levé.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Renvoi"
+<span class="mot">WHERE</span> "inscriptionId" = <span class="param">:inscriptionId</span> <span class="mot">AND</span> "reintegreLe" <span class="mot">IS</span> <span class="mot">NULL</span>
+<span class="mot">ORDER BY</span> "creeLe" <span class="mot">DESC</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R111. Compter les notes d'une inscription</h4>
+    <p class="quand"><b>Quand :</b> Avant de changer un élève de classe (impossible s'il a des notes) ; désapprobation.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Note" <span class="mot">WHERE</span> "inscriptionId" = <span class="param">:inscriptionId</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R112. Compter les notes de plusieurs inscriptions</h4>
+    <p class="quand"><b>Quand :</b> Désapprobation d'une réinscription : refusée si des notes ont été saisies depuis.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Note" <span class="mot">WHERE</span> "inscriptionId" <span class="mot">IN</span> (<span class="param">:inscriptionIds</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R113. Compter les notes d'un ou de plusieurs élèves</h4>
+    <p class="quand"><b>Quand :</b> Désapprobation d'une inscription ou d'un ajout groupé : refusée si des notes ont été saisies depuis.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*)
+<span class="mot">FROM</span> "Note" n
+<span class="mot">JOIN</span> "Inscription" i <span class="mot">ON</span> i.id = n."inscriptionId"
+<span class="mot">WHERE</span> i."eleveId" <span class="mot">IN</span> (<span class="param">:eleveIds</span>);</pre>
+  </div>
+  <h3>Ajouter</h3>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R114. Attribuer le numéro suivant</h4>
+    <p class="quand"><b>Quand :</b> Nouveau matricule d'élève (clé « matricule-CTM-26 ») ; numéro d'attestation (clé « attestation-2026-2027 »). Une seule instruction : deux inscriptions simultanées ne reçoivent jamais le même numéro.</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "Compteur" (cle, valeur) <span class="mot">VALUES</span> (<span class="param">:cle</span>, 1)
+<span class="mot">ON</span> CONFLICT (cle) <span class="mot">DO UPDATE</span> <span class="mot">SET</span> valeur = "Compteur".valeur + 1
+<span class="mot">RETURNING</span> valeur;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R115. Créer la fiche d'un élève</h4>
+    <p class="quand"><b>Quand :</b> Inscrire un élève (POST /api/eleves), ajout groupé (POST /api/eleves/lot), import Excel (POST /api/eleves/import).</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "Eleve" (id, matricule, "matriculeNational", nom, prenoms, sexe, "dateNaissance",
+  "lieuNaissance", "photoCle", "parentNom", "parentTelephone", "parentAdresse", "creeLe", "majLe")
+<span class="mot">VALUES</span> (<span class="param">:id</span>, <span class="param">:matricule</span>, <span class="param">:matriculeNational</span>, <span class="param">:nom</span>, <span class="param">:prenoms</span>, <span class="param">:sexe</span>, <span class="param">:dateNaissance</span>,
+  <span class="param">:lieuNaissance</span>, <span class="param">:photoCle</span>, <span class="param">:parentNom</span>, <span class="param">:parentTelephone</span>, <span class="param">:parentAdresse</span>, <span class="param">:creeLe</span>, <span class="param">:majLe</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R116. Inscrire un élève dans une classe</h4>
+    <p class="quand"><b>Quand :</b> Mêmes actions, et réinscription dans une nouvelle année (POST /api/eleves/reinscrire).</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "Inscription" (id, "eleveId", "anneeId", "classeId", redoublant, statut, "creeLe")
+<span class="mot">VALUES</span> (<span class="param">:id</span>, <span class="param">:eleveId</span>, <span class="param">:anneeId</span>, <span class="param">:classeId</span>, <span class="param">:redoublant</span>, <span class="chaine">'ACTIF'</span>, <span class="param">:creeLe</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R117. Enregistrer un renvoi</h4>
+    <p class="quand"><b>Quand :</b> Renvoyer un élève (POST /api/eleves/inscriptions/{id}/renvoyer, Directeur).</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "Renvoi" (id, "inscriptionId", date, motif, "parId", "creeLe", "reintegreLe", "reintegreParId", "motifReintegration")
+<span class="mot">VALUES</span> (<span class="param">:id</span>, <span class="param">:inscriptionId</span>, <span class="param">:date</span>, <span class="param">:motif</span>, <span class="param">:parId</span>, <span class="param">:creeLe</span>, <span class="mot">NULL</span>, <span class="mot">NULL</span>, <span class="mot">NULL</span>);</pre>
+  </div>
+  <h3>Modifier</h3>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R118. Mettre à jour la fiche d'un élève</h4>
+    <p class="quand"><b>Quand :</b> Modifier la fiche (PUT /api/eleves/{id}) ; ajouter ou changer sa photo (une ou plusieurs) ; désapprobation.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "Eleve"
+<span class="mot">SET</span> matricule = <span class="param">:matricule</span>, "matriculeNational" = <span class="param">:matriculeNational</span>, nom = <span class="param">:nom</span>, prenoms = <span class="param">:prenoms</span>,
+    sexe = <span class="param">:sexe</span>, "dateNaissance" = <span class="param">:dateNaissance</span>, "lieuNaissance" = <span class="param">:lieuNaissance</span>,
+    "photoCle" = <span class="param">:photoCle</span>, "parentNom" = <span class="param">:parentNom</span>, "parentTelephone" = <span class="param">:parentTelephone</span>,
+    "parentAdresse" = <span class="param">:parentAdresse</span>, "majLe" = <span class="param">:majLe</span>
+<span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R119. Mettre à jour une inscription</h4>
+    <p class="quand"><b>Quand :</b> Changer l'élève de classe ou de statut redoublant ; renvoi (statut RENVOYE) ; réintégration (statut ACTIF) ; désapprobation.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "Inscription"
+<span class="mot">SET</span> "eleveId" = <span class="param">:eleveId</span>, "anneeId" = <span class="param">:anneeId</span>, "classeId" = <span class="param">:classeId</span>,
+    redoublant = <span class="param">:redoublant</span>, statut = <span class="param">:statut</span>
+<span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R120. Lever un renvoi</h4>
+    <p class="quand"><b>Quand :</b> Réintégrer un élève (POST /api/eleves/inscriptions/{id}/reintegrer) : date, auteur et observation de la réintégration.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "Renvoi"
+<span class="mot">SET</span> "inscriptionId" = <span class="param">:inscriptionId</span>, date = <span class="param">:date</span>, motif = <span class="param">:motif</span>, "parId" = <span class="param">:parId</span>,
+    "reintegreLe" = <span class="param">:reintegreLe</span>, "reintegreParId" = <span class="param">:reintegreParId</span>,
+    "motifReintegration" = <span class="param">:motifReintegration</span>
+<span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <h3>Supprimer</h3>
+  <div class="requete">
+    <h4><span class="op supprimer">Supprimer</span> R121. Supprimer des inscriptions</h4>
+    <p class="quand"><b>Quand :</b> Uniquement quand le Directeur désapprouve une réinscription.</p>
+    <pre class="sql"><span class="mot">DELETE FROM</span> "Inscription" <span class="mot">WHERE</span> id <span class="mot">IN</span> (<span class="param">:ids</span>);</pre>
+    <p class="note">Les notes et les renvois de ces inscriptions sont supprimés avec elles par la base.</p>
+  </div>
+  <div class="requete">
+    <h4><span class="op supprimer">Supprimer</span> R122. Supprimer des élèves</h4>
+    <p class="quand"><b>Quand :</b> Uniquement quand le Directeur désapprouve une inscription, un ajout groupé ou un import, si aucune note n'a été saisie depuis.</p>
+    <pre class="sql"><span class="mot">DELETE FROM</span> "Eleve" <span class="mot">WHERE</span> id <span class="mot">IN</span> (<span class="param">:ids</span>);</pre>
+    <p class="note">Leurs inscriptions, et avec elles leurs notes et leurs renvois, sont supprimées par la base.</p>
+  </div>
+</section>
+
+<section class="chapitre">
+  <h2>10. Notes et compétences visées</h2>
+  <p>Une note relie une inscription, une matière et une séquence (une seule note par triplet). La compétence visée est le texte que le professeur associe à une matière pour une séquence ; elle s'imprime sur le bulletin.</p>
+  <p class="tables">Tables : <code>Note</code>, <code>CompetenceVisee</code></p>
+  <h3>Lire</h3>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R123. Notes d'une feuille</h4>
+    <p class="quand"><b>Quand :</b> Feuille de notes d'une matière pour une séquence (GET /api/notes/feuille).</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Note" <span class="mot">WHERE</span> "matiereId" = <span class="param">:matiereId</span> <span class="mot">AND</span> "sequenceId" = <span class="param">:sequenceId</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R124. Lire une note</h4>
+    <p class="quand"><b>Quand :</b> Enregistrement d'une feuille : la note existe-t-elle déjà ?</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Note"
+<span class="mot">WHERE</span> "inscriptionId" = <span class="param">:inscriptionId</span> <span class="mot">AND</span> "matiereId" = <span class="param">:matiereId</span> <span class="mot">AND</span> "sequenceId" = <span class="param">:sequenceId</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R125. Notes d'une classe pour le calcul</h4>
+    <p class="quand"><b>Quand :</b> Relevé de notes, bulletins, statistiques, classement, tableau d'honneur : les notes des élèves actifs pour les séquences de la période (une séquence, les deux d'un trimestre ou les six de l'année).</p>
+    <pre class="sql"><span class="mot">SELECT</span> n."inscriptionId", n."matiereId", s.numero, n.valeur
+<span class="mot">FROM</span> "Note" n
+<span class="mot">JOIN</span> "Sequence" s <span class="mot">ON</span> s.id = n."sequenceId"
+<span class="mot">JOIN</span> "Inscription" i <span class="mot">ON</span> i.id = n."inscriptionId"
+<span class="mot">JOIN</span> "Matiere" m <span class="mot">ON</span> m.id = n."matiereId"
+<span class="mot">WHERE</span> m."classeId" = <span class="param">:classeId</span> <span class="mot">AND</span> i.statut = <span class="chaine">'ACTIF'</span> <span class="mot">AND</span> s.numero <span class="mot">IN</span> (<span class="param">:numeros</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R126. Compter les notes de chaque matière</h4>
+    <p class="quand"><b>Quand :</b> Page Matières (une matière notée affiche son nombre de notes).</p>
+    <pre class="sql"><span class="mot">SELECT</span> n."matiereId", <span class="mot">count</span>(*) <span class="mot">FROM</span> "Note" n <span class="mot">WHERE</span> n."matiereId" <span class="mot">IN</span> (<span class="param">:matiereIds</span>) <span class="mot">GROUP BY</span> n."matiereId";</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R127. Compter les notes par matière et par séquence</h4>
+    <p class="quand"><b>Quand :</b> Tableau de bord : avancement de la saisie (élèves actifs seulement).</p>
+    <pre class="sql"><span class="mot">SELECT</span> n."matiereId", n."sequenceId", <span class="mot">count</span>(*)
+<span class="mot">FROM</span> "Note" n
+<span class="mot">JOIN</span> "Inscription" i <span class="mot">ON</span> i.id = n."inscriptionId"
+<span class="mot">WHERE</span> n."matiereId" <span class="mot">IN</span> (<span class="param">:matiereIds</span>) <span class="mot">AND</span> i.statut = <span class="chaine">'ACTIF'</span>
+<span class="mot">GROUP BY</span> n."matiereId", n."sequenceId";</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R128. Compter les notes saisies par un compte</h4>
+    <p class="quand"><b>Quand :</b> Désapprobation de la création d'un enseignant : refusée s'il a déjà saisi des notes.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Note" <span class="mot">WHERE</span> "saisieParId" = <span class="param">:utilisateurId</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R129. Lire une compétence visée</h4>
+    <p class="quand"><b>Quand :</b> Feuille de notes ; avant de l'enregistrer (Hibernate vérifie si elle existe).</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "CompetenceVisee" <span class="mot">WHERE</span> "matiereId" = <span class="param">:matiereId</span> <span class="mot">AND</span> "sequenceId" = <span class="param">:sequenceId</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R130. Compétences visées d'une classe</h4>
+    <p class="quand"><b>Quand :</b> Bulletins : les compétences des matières de la classe pour la séquence.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "CompetenceVisee" cv
+<span class="mot">WHERE</span> cv."matiereId" <span class="mot">IN</span> (<span class="mot">SELECT</span> m.id <span class="mot">FROM</span> "Matiere" m <span class="mot">WHERE</span> m."classeId" = <span class="param">:classeId</span>)
+  <span class="mot">AND</span> cv."sequenceId" <span class="mot">IN</span> (<span class="mot">SELECT</span> s.id <span class="mot">FROM</span> "Sequence" s <span class="mot">WHERE</span> s."anneeId" = <span class="param">:anneeId</span> <span class="mot">AND</span> s.numero = <span class="param">:numero</span>);</pre>
+  </div>
+  <h3>Ajouter</h3>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R131. Ajouter une note</h4>
+    <p class="quand"><b>Quand :</b> Enregistrement d'une feuille de notes (PUT /api/notes/feuille), pour chaque élève qui n'avait pas encore de note.</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "Note" (id, "inscriptionId", "matiereId", "sequenceId", valeur, "saisieParId", "majLe")
+<span class="mot">VALUES</span> (<span class="param">:id</span>, <span class="param">:inscriptionId</span>, <span class="param">:matiereId</span>, <span class="param">:sequenceId</span>, <span class="param">:valeur</span>, <span class="param">:saisieParId</span>, <span class="param">:majLe</span>);</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R132. Ajouter une compétence visée</h4>
+    <p class="quand"><b>Quand :</b> Enregistrement d'une feuille avec une compétence, s'il n'y en avait pas.</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "CompetenceVisee" ("matiereId", "sequenceId", texte) <span class="mot">VALUES</span> (<span class="param">:matiereId</span>, <span class="param">:sequenceId</span>, <span class="param">:texte</span>);</pre>
+  </div>
+  <h3>Modifier</h3>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R133. Changer une note</h4>
+    <p class="quand"><b>Quand :</b> Même enregistrement, pour un élève qui avait déjà une note : nouvelle valeur et nouvel auteur.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "Note"
+<span class="mot">SET</span> "inscriptionId" = <span class="param">:inscriptionId</span>, "matiereId" = <span class="param">:matiereId</span>, "sequenceId" = <span class="param">:sequenceId</span>,
+    valeur = <span class="param">:valeur</span>, "saisieParId" = <span class="param">:saisieParId</span>, "majLe" = <span class="param">:majLe</span>
+<span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R134. Changer une compétence visée</h4>
+    <p class="quand"><b>Quand :</b> Même enregistrement, s'il y en avait déjà une.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "CompetenceVisee" <span class="mot">SET</span> texte = <span class="param">:texte</span> <span class="mot">WHERE</span> "matiereId" = <span class="param">:matiereId</span> <span class="mot">AND</span> "sequenceId" = <span class="param">:sequenceId</span>;</pre>
+  </div>
+  <h3>Supprimer</h3>
+  <div class="requete">
+    <h4><span class="op supprimer">Supprimer</span> R135. Effacer une note</h4>
+    <p class="quand"><b>Quand :</b> Même enregistrement, quand le professeur vide la case d'un élève.</p>
+    <pre class="sql"><span class="mot">DELETE FROM</span> "Note"
+<span class="mot">WHERE</span> "inscriptionId" = <span class="param">:inscriptionId</span> <span class="mot">AND</span> "matiereId" = <span class="param">:matiereId</span> <span class="mot">AND</span> "sequenceId" = <span class="param">:sequenceId</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op supprimer">Supprimer</span> R136. Effacer une compétence visée</h4>
+    <p class="quand"><b>Quand :</b> Même enregistrement, quand le professeur vide la compétence.</p>
+    <pre class="sql"><span class="mot">DELETE FROM</span> "CompetenceVisee" <span class="mot">WHERE</span> "matiereId" = <span class="param">:matiereId</span> <span class="mot">AND</span> "sequenceId" = <span class="param">:sequenceId</span>;</pre>
+  </div>
+</section>
+
+<section class="chapitre">
+  <h2>11. Journal des décisions</h2>
+  <p>Chaque action du Surveillant Général sur l'organisation, la scolarité ou l'administration est consignée ici, approuvée d'office. La colonne annulation (JSON) garde ce qu'il faut pour défaire l'action si le Directeur la désapprouve dans les 4 semaines.</p>
+  <p class="tables">Tables : <code>Decision</code></p>
+  <h3>Lire</h3>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R137. Lire une page du journal</h4>
+    <p class="quand"><b>Quand :</b> Décisions prises (GET /api/decisions), 50 par page, les plus récentes d'abord. Les conditions entre crochets ne sont ajoutées que si le filtre est donné ; la dernière sert à charger la page suivante.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Decision" d
+<span class="mot">WHERE</span> d.domaine = <span class="param">:domaine</span>                                   <span class="com">-- [domaine]</span>
+  <span class="mot">AND</span> d.statut = <span class="param">:statut</span>                                     <span class="com">-- [statut]</span>
+  <span class="mot">AND</span> d."creeLe" &gt;= <span class="param">:debutDelai</span>                              <span class="com">-- [statut « encore désapprouvables »]</span>
+  <span class="mot">AND</span> <span class="mot">lower</span>(d.libelle) <span class="mot">LIKE</span> <span class="param">:motif</span> <span class="mot">ESCAPE</span> <span class="chaine">'\'</span>               <span class="com">-- [recherche]</span>
+  <span class="mot">AND</span> (d."creeLe" &lt; <span class="param">:curseurDate</span>                             <span class="com">-- [page suivante]</span>
+       <span class="mot">OR</span> (d."creeLe" = <span class="param">:curseurDate</span> <span class="mot">AND</span> d.id &lt; <span class="param">:curseurId</span>))
+<span class="mot">ORDER BY</span> d."creeLe" <span class="mot">DESC</span>, d.id <span class="mot">DESC</span>
+<span class="mot">LIMIT</span> 51;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R138. Compter les décisions encore désapprouvables</h4>
+    <p class="quand"><b>Quand :</b> En tête du journal.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Decision" <span class="mot">WHERE</span> statut = <span class="chaine">'APPROUVEE'</span> <span class="mot">AND</span> "creeLe" &gt;= <span class="param">:debutDelai</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R139. Compter les décisions désapprouvées</h4>
+    <p class="quand"><b>Quand :</b> En tête du journal.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Decision" <span class="mot">WHERE</span> statut = <span class="chaine">'DESAPPROUVEE'</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R140. Lire une décision</h4>
+    <p class="quand"><b>Quand :</b> Désapprouver ; curseur de la page suivante.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Decision" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <h3>Ajouter</h3>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R141. Consigner une décision</h4>
+    <p class="quand"><b>Quand :</b> Après chaque action du SG concernée : classe, spécialité, groupe, matière, enseignant, élève (inscription, fiche, photo, import, réinscription), année, séquence, établissement, barème, seuil du tableau d'honneur.</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "Decision" (id, domaine, action, libelle, lien, "auteurId", "creeLe", statut,
+  "desapprouveeLe", "desapprouveeParId", "motifDesapprobation", annulation, annulee)
+<span class="mot">VALUES</span> (<span class="param">:id</span>, <span class="param">:domaine</span>, <span class="param">:action</span>, <span class="param">:libelle</span>, <span class="param">:lien</span>, <span class="param">:auteurId</span>, <span class="param">:creeLe</span>, <span class="chaine">'APPROUVEE'</span>,
+  <span class="mot">NULL</span>, <span class="mot">NULL</span>, <span class="mot">NULL</span>, <span class="param">:annulation</span>, <span class="param">:annulee</span>);</pre>
+  </div>
+  <h3>Modifier</h3>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R142. Mettre à jour une décision</h4>
+    <p class="quand"><b>Quand :</b> Désapprouver (POST /api/decisions/{id}/desapprouver) : statut DESAPPROUVEE, date, auteur et motif ; complément des données d'annulation juste après la consignation.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "Decision"
+<span class="mot">SET</span> domaine = <span class="param">:domaine</span>, action = <span class="param">:action</span>, libelle = <span class="param">:libelle</span>, lien = <span class="param">:lien</span>, "auteurId" = <span class="param">:auteurId</span>,
+    statut = <span class="param">:statut</span>, "desapprouveeLe" = <span class="param">:desapprouveeLe</span>, "desapprouveeParId" = <span class="param">:desapprouveeParId</span>,
+    "motifDesapprobation" = <span class="param">:motifDesapprobation</span>, annulation = <span class="param">:annulation</span>, annulee = <span class="param">:annulee</span>
+<span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+    <p class="note">Une décision n'est jamais supprimée.</p>
+  </div>
+</section>
+
+<section class="chapitre">
+  <h2>12. Notifications</h2>
+  <p>Messages affichés sous la cloche : le SG est prévenu quand le Directeur désapprouve une de ses décisions ; les professeurs, quand une séquence est ouverte à la saisie.</p>
+  <p class="tables">Tables : <code>Notification</code></p>
+  <h3>Lire</h3>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R143. Les 30 dernières notifications</h4>
+    <p class="quand"><b>Quand :</b> Cloche (GET /api/notifications), relue chaque minute.</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Notification"
+<span class="mot">WHERE</span> "destinataireId" = <span class="param">:utilisateurId</span>
+<span class="mot">ORDER BY</span> "creeLe" <span class="mot">DESC</span>
+<span class="mot">LIMIT</span> 30;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R144. Compter les non lues</h4>
+    <p class="quand"><b>Quand :</b> Pastille de la cloche.</p>
+    <pre class="sql"><span class="mot">SELECT</span> <span class="mot">count</span>(*) <span class="mot">FROM</span> "Notification" <span class="mot">WHERE</span> "destinataireId" = <span class="param">:utilisateurId</span> <span class="mot">AND</span> lue = <span class="mot">false</span>;</pre>
+  </div>
+  <h3>Ajouter</h3>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R145. Envoyer une notification</h4>
+    <p class="quand"><b>Quand :</b> Une par destinataire : désapprobation (au SG), ouverture d'une séquence (aux professeurs concernés).</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "Notification" (id, "destinataireId", titre, message, lien, lue, "creeLe")
+<span class="mot">VALUES</span> (<span class="param">:id</span>, <span class="param">:destinataireId</span>, <span class="param">:titre</span>, <span class="param">:message</span>, <span class="param">:lien</span>, <span class="mot">false</span>, <span class="param">:creeLe</span>);</pre>
+  </div>
+  <h3>Modifier</h3>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R146. Marquer une notification comme lue</h4>
+    <p class="quand"><b>Quand :</b> POST /api/notifications/{id}/lue.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "Notification" <span class="mot">SET</span> lue = <span class="mot">true</span> <span class="mot">WHERE</span> id = <span class="param">:id</span> <span class="mot">AND</span> "destinataireId" = <span class="param">:utilisateurId</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op modifier">Modifier</span> R147. Tout marquer comme lu</h4>
+    <p class="quand"><b>Quand :</b> POST /api/notifications/lues.</p>
+    <pre class="sql"><span class="mot">UPDATE</span> "Notification" <span class="mot">SET</span> lue = <span class="mot">true</span> <span class="mot">WHERE</span> "destinataireId" = <span class="param">:utilisateurId</span> <span class="mot">AND</span> lue = <span class="mot">false</span>;</pre>
+    <p class="note">Les notifications ne sont pas supprimées par l'application ; elles partent avec le compte de leur destinataire.</p>
+  </div>
+</section>
+
+<section class="chapitre">
+  <h2>13. Attestations de présence effective au poste</h2>
+  <p>Délivrées par le Directeur. Chaque attestation garde une copie des informations imprimées (nom, grade, fonction…) : corriger la carrière ensuite ne la modifie pas. Le numéro vient du compteur « attestation-&lt;année&gt; ».</p>
+  <p class="tables">Tables : <code>Attestation</code></p>
+  <h3>Lire</h3>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R148. Lire le registre</h4>
+    <p class="quand"><b>Quand :</b> Attestations de présence (GET /api/attestations), les plus récentes d'abord.</p>
+    <pre class="sql"><span class="mot">SELECT</span> a.*, u.*
+<span class="mot">FROM</span> "Attestation" a
+<span class="mot">JOIN</span> "Utilisateur" u <span class="mot">ON</span> u.id = a."parId"
+<span class="mot">ORDER BY</span> a."delivreeLe" <span class="mot">DESC</span>;</pre>
+  </div>
+  <div class="requete">
+    <h4><span class="op lire">Lire</span> R149. Lire une attestation</h4>
+    <p class="quand"><b>Quand :</b> Imprimer une attestation (GET /api/attestations/{id}/pdf).</p>
+    <pre class="sql"><span class="mot">SELECT</span> * <span class="mot">FROM</span> "Attestation" <span class="mot">WHERE</span> id = <span class="param">:id</span>;</pre>
+  </div>
+  <h3>Ajouter</h3>
+  <div class="requete">
+    <h4><span class="op ajouter">Ajouter</span> R150. Délivrer une attestation</h4>
+    <p class="quand"><b>Quand :</b> POST /api/attestations, après « Attribuer le numéro suivant » (voir Élèves) et la mise à jour de la carrière du bénéficiaire.</p>
+    <pre class="sql"><span class="mot">INSERT INTO</span> "Attestation" (id, reference, numero, "anneeLibelle", "utilisateurId", beneficiaire, sexe,
+  matricule, grade, fonction, "datePriseService", "acteNomination", signataire, "parId", "delivreeLe")
+<span class="mot">VALUES</span> (<span class="param">:id</span>, <span class="param">:reference</span>, <span class="param">:numero</span>, <span class="param">:anneeLibelle</span>, <span class="param">:utilisateurId</span>, <span class="param">:beneficiaire</span>, <span class="param">:sexe</span>,
+  <span class="param">:matricule</span>, <span class="param">:grade</span>, <span class="param">:fonction</span>, <span class="param">:datePriseService</span>, <span class="param">:acteNomination</span>, <span class="param">:signataire</span>, <span class="param">:parId</span>, <span class="param">:delivreeLe</span>);</pre>
+    <p class="note">Une attestation n'est ni modifiée ni supprimée par l'application ; elle part avec le compte de son bénéficiaire.</p>
+  </div>
+</section>
+
+<section class="chapitre">
+  <h2>14. Suppressions en cascade</h2>
+  <p>Les clés étrangères décident de ce que fait la base quand on supprime une ligne référencée : elle supprime aussi les lignes qui en dépendent (<b>cascade</b>), vide le champ qui la désigne (<b>mise à vide</b>), ou <b>refuse</b> la suppression. L'application vérifie la plupart de ces refus avant d'agir, pour donner un message clair.</p>
+  <table>
+    <tr><th style="width:18%">On supprime…</th><th>La base supprime aussi</th><th style="width:22%">La base vide</th><th style="width:26%">La base refuse si…</th></tr>
+    <tr><td>une année</td><td>ses séquences, classes, groupes et inscriptions, puis en chaîne matières, notes, compétences, renvois, rattachements</td><td>—</td><td>—</td></tr>
+    <tr><td>une classe</td><td>ses matières (puis leurs notes et compétences) et ses rattachements aux groupes</td><td>—</td><td>une inscription la référence</td></tr>
+    <tr><td>un groupe</td><td>ses rattachements aux classes</td><td>—</td><td>une matière y est rangée</td></tr>
+    <tr><td>une spécialité</td><td>—</td><td>—</td><td>une classe la porte</td></tr>
+    <tr><td>une matière</td><td>ses notes et ses compétences visées</td><td>—</td><td>—</td></tr>
+    <tr><td>une séquence</td><td>ses notes et ses compétences visées</td><td>—</td><td>—</td></tr>
+    <tr><td>un élève</td><td>ses inscriptions, puis leurs notes et leurs renvois</td><td>—</td><td>—</td></tr>
+    <tr><td>une inscription</td><td>ses notes et ses renvois</td><td>—</td><td>—</td></tr>
+    <tr><td>un compte</td><td>ses notifications ; les attestations dont il est bénéficiaire</td><td>professeur principal des classes, professeur des matières, auteur d'une réintégration, auteur d'une désapprobation</td><td>il a saisi des notes, consigné des décisions, renvoyé un élève ou délivré une attestation</td></tr>
+  </table>
+  <div class="encadre attention">Dans l'application, les suppressions directes sont limitées : spécialité, classe vide, groupe vide, matière (avec confirmation si elle a des notes), note effacée, compétence vidée, barème remplacé, rattachement d'une classe à un groupe. Les élèves, inscriptions, comptes et années ne sont supprimés que lorsque le Directeur désapprouve leur création, et seulement si rien n'en dépend encore.</div>
+</section>
+
+<section class="chapitre">
+  <h2>15. Opérations en plusieurs requêtes</h2>
+  <p>Une action de l'utilisateur déclenche souvent plusieurs requêtes, dans une seule transaction : si l'une échoue, aucune n'est gardée. Quelques exemples, dans l'ordre d'exécution :</p>
+  <h3>Inscrire un élève</h3>
+  <ol><li>Lire l'établissement (préfixe des matricules) et la classe.</li><li>Attribuer le numéro suivant du compteur des matricules.</li><li>Créer la fiche de l'élève, puis son inscription dans la classe.</li><li>Consigner la décision dans le journal.</li></ol>
+  <h3>Enregistrer une feuille de notes</h3>
+  <ol><li>Lire la matière et la séquence (la saisie doit être ouverte).</li><li>Vérifier que les élèves sont des inscriptions actives de la classe.</li><li>Pour chaque élève : lire sa note, puis l'ajouter, la changer ou l'effacer.</li><li>Lire la compétence visée, puis l'ajouter, la changer ou l'effacer.</li></ol>
+  <h3>Créer une classe</h3>
+  <ol><li>Lire l'année et la spécialité.</li><li>Lire les classes du même niveau et de la même spécialité, et le plus grand numéro.</li><li>Créer la classe, puis renommer les classes voisines si elles prennent une lettre.</li><li>Consigner la décision.</li></ol>
+  <h3>Supprimer une classe</h3>
+  <ol><li>Lire la classe et compter ses inscriptions (il ne doit y en avoir aucune).</li><li>Lire ses matières et les supprimer une à une.</li><li>Supprimer la classe, puis renommer les classes voisines.</li><li>Consigner la décision.</li></ol>
+  <h3>Ouvrir une séquence</h3>
+  <ol><li>Lire la séquence et la mettre à jour (saisie ouverte).</li><li>Consigner la décision.</li><li>Lire les professeurs actifs qui enseignent dans l'année et leur envoyer une notification.</li></ol>
+  <h3>Créer une année en reprenant l'organisation</h3>
+  <ol><li>Créer l'année et ses six séquences ; si elle devient l'année en cours, désactiver les autres.</li><li>Lire les groupes et les classes de l'année copiée ; créer les groupes, les classes, leurs rattachements et les matières.</li><li>Consigner la décision.</li></ol>
+  <h3>Délivrer une attestation</h3>
+  <ol><li>Mettre à jour la carrière du bénéficiaire (requête précédente, depuis la même fenêtre).</li><li>Lire l'année en cours, l'établissement, le bénéficiaire et le Directeur.</li><li>Attribuer le numéro suivant du compteur « attestation-&lt;année&gt; ».</li><li>Enregistrer l'attestation.</li></ol>
+  <h3>Désapprouver une décision</h3>
+  <ol><li>Lire la décision (moins de 4 semaines, encore approuvée).</li><li>Défaire l'action à partir des données gardées dans la colonne <code>annulation</code> : suppression de ce qui a été créé, remise des valeurs précédentes, recréation de ce qui a été supprimé ; les vérifications (notes saisies, élèves inscrits) peuvent tout refuser.</li><li>Mettre à jour la décision (désapprouvée, motif, auteur, date).</li><li>Envoyer une notification au Surveillant Général.</li></ol>
+</section>
+
+<section class="chapitre">
+  <h2>16. Démarrage : migrations et amorçage</h2>
+  <h3>Migrations Flyway</h3>
+  <p>Au démarrage, Flyway applique les migrations qui manquent, dans l'ordre, et les note dans <code>flyway_schema_history</code>. Le schéma n'est jamais modifié par Hibernate. Les quatre premières migrations viennent de l'ancienne API Node (Prisma) ; sur une base qu'elle avait créée, Flyway part de la version 4 sans les rejouer.</p>
+  <table>
+    <tr><th style="width:42%">Fichier</th><th>Contenu</th></tr>
+    <tr><td><code>V1__init.sql</code></td><td>Tables d'origine, énumérations, clés étrangères et index</td></tr>
+    <tr><td><code>V2__specialites_decisions.sql</code></td><td>Spécialités et numéro des classes (lettres A, B…), journal des décisions</td></tr>
+    <tr><td><code>V3__annulation_decisions.sql</code></td><td>Données d'annulation des décisions (JSON)</td></tr>
+    <tr><td><code>V4__notifications.sql</code></td><td>Notifications</td></tr>
+    <tr><td><code>V5__entete_carriere_attestations_tableau_honneur.sql</code></td><td>Sigle anglais et seuil du tableau d'honneur, carrière des personnels, attestations</td></tr>
+  </table>
+  <h3>Amorçage d'une base vide</h3>
+  <p>Lancée avec l'option <code>--amorcer</code>, l'API remplit une base vide, en sautant ce qui existe déjà :</p>
+  <ol>
+    <li>l'établissement (« Savoir si l'établissement existe », puis « Créer l'établissement ») ;</li>
+    <li>les barèmes par défaut (« Compter les barèmes », puis « Ajouter une mention » pour chacune) ;</li>
+    <li>l'année en cours et ses six séquences (« Compter les années », « Créer une année », « Créer une séquence ») ;</li>
+    <li>les comptes du Directeur et du Surveillant Général (« Savoir si un compte de ce rôle existe », puis « Créer un compte »).</li>
+  </ol>
+</section>
+
+</body>
+</html>
