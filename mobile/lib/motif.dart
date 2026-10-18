@@ -1,4 +1,4 @@
-// Fond de l'application : le même motif que sur le web (web/src/components/MotifFond.tsx),
+// Fond de l'application : le même motif que sur le web (dépôt cetic-mezesse-web, src/components/MotifFond.tsx),
 // redessiné à partir des mêmes tracés SVG.
 import 'dart:math';
 

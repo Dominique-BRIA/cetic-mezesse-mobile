@@ -12,7 +12,7 @@
     <div class="drapeau"><div style="background:#007a5e"></div><div style="background:#ce1126"></div><div style="background:#fcd116"></div></div>
     <div class="entete">
       <div class="gauche"><b>RÉPUBLIQUE DU CAMEROUN</b><br><i>Paix – Travail – Patrie</i><br>Ministère des Enseignements Secondaires<br>DRES-Sud · DDES Dja-et-Lobo</div>
-      <img class="sceau" src="../web/public/logo.png" alt="Sceau du CETIC de Mezessé">
+      <img class="sceau" src="img/logo.png" alt="Sceau du CETIC de Mezesse">
       <div class="droite"><b>REPUBLIC OF CAMEROON</b><br><i>Peace – Work – Fatherland</i><br>Ministry of Secondary Education<br>South RDSE · Dja and Lobo DDSE</div>
     </div>
     <h1>Application de gestion scolaire<br>du CETIC de Mezessé</h1>
@@ -66,7 +66,7 @@
   <table>
     <tr><th>Livrable</th><th>Technologies</th></tr>
     <tr><td>API (serveur)</td><td>Node.js, Express 5, TypeScript, Prisma, PostgreSQL, pdfkit, ExcelJS</td></tr>
-    <tr><td>Application web</td><td>React 18, Vite, Tailwind CSS, TanStack Query, Recharts</td></tr>
+    <tr><td>Application web</td><td>Next.js 16 (React 19), Tailwind CSS, TanStack Query, Recharts</td></tr>
     <tr><td>Application mobile Android</td><td>Flutter (Dart), fl_chart, stockage local pour le hors connexion</td></tr>
     <tr><td>Documents</td><td>Ce rapport, le manuel d'utilisation, les diagrammes sources (<code>docs/diagrammes</code>)</td></tr>
   </table>
@@ -262,7 +262,7 @@
     <tr><td><code>api/src/calcul</code></td><td>Module pur des calculs (section 6)</td></tr>
     <tr><td><code>api/src/routes</code></td><td>Une route par domaine : auth, élèves, classes, groupes, matières, utilisateurs, notes, statistiques, documents, années</td></tr>
     <tr><td><code>api/src/pdf</code></td><td>Bulletins et listes (pdfkit), en-tête officiel bilingue et sceau</td></tr>
-    <tr><td><code>web/src</code></td><td>Pages par rôle, composants communs, graphiques, motif de fond</td></tr>
+    <tr><td>dépôt <code>cetic-mezesse-web</code></td><td>Une page par adresse (<code>src/app</code>), écrans par rôle (<code>src/ecrans</code>), composants communs, graphiques, motif de fond</td></tr>
     <tr><td><code>mobile/lib</code></td><td>Client API avec cache, file d'attente hors connexion, écrans par rôle</td></tr>
   </table>
   <h3>7.2 Sécurité</h3>
@@ -323,7 +323,7 @@
     <tr><th>Composant</th><th>Hébergement</th><th>Remarque</th></tr>
     <tr><td>Base de données</td><td>Neon (PostgreSQL)</td><td>migrations appliquées par <code>prisma migrate deploy</code></td></tr>
     <tr><td>API</td><td>Azure App Service (compte étudiant)</td><td>variables : base, JWT, CORS, B2</td></tr>
-    <tr><td>Application web</td><td>Vercel</td><td>variable <code>VITE_API_URL</code></td></tr>
+    <tr><td>Application web</td><td>Vercel</td><td>variable <code>NEXT_PUBLIC_API_URL</code></td></tr>
     <tr><td>Photos des élèves</td><td>Backblaze B2</td><td>API compatible S3 ; disque local en développement</td></tr>
     <tr><td>Application Android</td><td>GitHub Actions</td><td>l'APK est construit à chaque modification du dossier <code>mobile</code></td></tr>
   </table>

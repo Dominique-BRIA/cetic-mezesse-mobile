@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-// Mêmes couleurs que le client web (web/src/styles.css).
+// Mêmes couleurs que le client web (dépôt cetic-mezesse-web, src/styles.css).
 class Couleurs extends ThemeExtension<Couleurs> {
   const Couleurs({
     required this.fond,
