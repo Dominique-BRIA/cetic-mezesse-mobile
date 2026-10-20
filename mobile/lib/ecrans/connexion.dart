@@ -48,7 +48,7 @@ class _EcranConnexionState extends State<EcranConnexion> {
     });
     try {
       final r = await Api.i.envoyer('POST', '/auth/connexion',
-          corps: {'identifiant': _id.text.trim(), 'motDePasse': _mdp.text}, annee: false) as Map;
+          corps: {'identifiant': _id.text.trim(), 'motDePasse': _mdp.text, 'resterConnecte': _memoriser}, annee: false) as Map;
       await Etat.i.connecter(r['jeton'] as String, (r['utilisateur'] as Map).cast<String, dynamic>(), memoriser: _memoriser);
     } on ErreurApi catch (e) {
       setState(() => _erreur = e.message);

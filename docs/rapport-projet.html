@@ -118,7 +118,7 @@
     <tr><td>RG-01</td><td>Trois rôles : Directeur (chef d'établissement), Surveillant Général, Professeur. Le Directeur et le SG sont créés à l'installation ; le SG crée les comptes des professeurs.</td></tr>
     <tr><td>RG-02</td><td>On se connecte avec son téléphone ou son e-mail (au moins l'un des deux, chacun unique) et un mot de passe.</td></tr>
     <tr><td>RG-03</td><td>Un mot de passe créé ou réinitialisé par le SG vaut <code>password</code> et doit être changé à la connexion suivante (8 caractères au moins, différent de <code>password</code>).</td></tr>
-    <tr><td>RG-04</td><td>Une session dure 12 heures ; un compte désactivé perd l'accès immédiatement.</td></tr>
+    <tr><td>RG-04</td><td>Une session prend fin après 12 heures sans utilisation, ou 90 jours avec « Rester connecté » ; chaque utilisation la prolonge. Changer ou réinitialiser le mot de passe ferme les sessions ouvertes sur les autres appareils. Un compte désactivé perd l'accès immédiatement.</td></tr>
     <tr><td>RG-05</td><td>Une année scolaire compte six séquences, deux par trimestre. Une seule année est active.</td></tr>
     <tr><td>RG-06</td><td>Une nouvelle année peut reprendre l'organisation d'une autre : groupes, classes, matières, coefficients, professeurs.</td></tr>
     <tr><td>RG-07</td><td>Une classe appartient à une année ; son nom est unique dans l'année.</td></tr>
@@ -287,7 +287,7 @@
   </table>
   <h3>7.2 Sécurité</h3>
   <ul>
-    <li>Mots de passe hachés avec <b>bcrypt</b> ; jeton <b>JWT</b> signé, valable 12 heures, vérifié à chaque requête par <b>Spring Security</b> avec l'état du compte.</li>
+    <li>Mots de passe hachés avec <b>bcrypt</b> ; jeton <b>JWT</b> signé, renouvelé à l'usage (fin après 12 heures, ou 90 jours avec « Rester connecté », sans utilisation), vérifié à chaque requête par <b>Spring Security</b> avec l'état du compte et sa version de session.</li>
     <li>Contrôle des rôles <b>côté serveur</b> sur chaque route, par des annotations sur les méthodes des contrôleurs ; un professeur n'accède qu'à ses matières.</li>
     <li>Validation de toutes les entrées avec <b>Bean Validation</b> ; messages d'erreur en français.</li>
     <li>Limitation des tentatives de connexion (20 par quart d'heure) ; en-têtes de sécurité HTTP ; CORS limité aux origines déclarées.</li>

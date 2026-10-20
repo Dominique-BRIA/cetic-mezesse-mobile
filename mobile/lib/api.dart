@@ -57,6 +57,13 @@ class Api {
     anneeId = prefs.getString('annee');
   }
 
+  /// Jeton neuf de la même session : gardé sur le téléphone seulement si l'ancien l'était
+  /// (« rester connecté »).
+  Future<void> _renouvelerJeton(String neuf) async {
+    jeton = neuf;
+    if (prefs.containsKey('jeton')) await prefs.setString('jeton', neuf);
+  }
+
   Uri _uri(String chemin, {bool annee = true}) {
     final u = Uri.parse('$base$chemin');
     if (!annee || anneeId == null || u.queryParameters.containsKey('anneeId')) return u;
@@ -104,6 +111,9 @@ class Api {
     noter('$quoi → ${r.statusCode} (${chrono.elapsedMilliseconds} ms)');
     _reseauOk();
     if (r.statusCode == 401 && jeton != null) surSessionExpiree?.call();
+    // Session prolongée (RG-04) : l'API renvoie un jeton neuf dès que l'ancien a plus d'une heure.
+    final neuf = r.headers['x-jeton'];
+    if (neuf != null && jeton != null && r.statusCode != 401) await _renouvelerJeton(neuf);
     if (r.statusCode >= 400) {
       var message = 'Erreur ${r.statusCode}';
       try {

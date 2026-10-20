@@ -1,13 +1,13 @@
 # Règles de gestion
 
-Validées avec le commanditaire le 16/10/2026 ; RG-33 à RG-35 ajoutées le 18/10/2026. Le code y renvoie par leur numéro ; le rapport (`rapport-projet.html`, chapitre 3) les reprend.
+Validées avec le commanditaire le 16/10/2026 ; RG-33 à RG-35 ajoutées le 18/10/2026 ; RG-04 modifiée le 20/10/2026 (sessions prolongées). Le code y renvoie par leur numéro ; le rapport (`rapport-projet.html`, chapitre 3) les reprend.
 
 | N° | Règle |
 |---|---|
 | RG-01 | Trois rôles : Directeur (chef d'établissement, code `PROVISEUR`), Surveillant Général, Professeur. Le Directeur et le SG sont créés à l'installation (`--amorcer`) ; le SG crée les comptes des professeurs. |
 | RG-02 | Connexion par téléphone ou e-mail (au moins l'un des deux, chacun unique) et mot de passe. |
 | RG-03 | Un mot de passe créé ou réinitialisé par le SG vaut `password` et doit être changé à la connexion suivante (8 caractères au moins, différent de `password`). |
-| RG-04 | Une session dure 12 heures ; un compte désactivé perd l'accès immédiatement. |
+| RG-04 | Une session prend fin après 12 heures sans utilisation, ou 90 jours avec « Rester connecté » ; chaque utilisation la prolonge. Changer ou réinitialiser le mot de passe ferme les sessions ouvertes sur les autres appareils. Un compte désactivé perd l'accès immédiatement. |
 | RG-05 | Une année scolaire compte six séquences, deux par trimestre. Une seule année est active. |
 | RG-06 | Une nouvelle année peut reprendre l'organisation d'une autre : groupes, classes, matières, coefficients, professeurs. |
 | RG-07 | Une classe appartient à une année ; son nom est unique dans l'année. Une classe sans élève peut être supprimée. |
