@@ -20,7 +20,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # CETIC : augmenter ce numéro publie une nouvelle APK (Release GitHub), que l'application propose
 # d'installer. Sans changement, un push devient un correctif Shorebird (code Dart seulement).
 # Voir mobile/README.md, « Publier une mise à jour ».
-version: 1.1.0+2
+version: 1.1.1+3
 
 environment:
   sdk: ^3.12.2

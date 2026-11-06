@@ -186,11 +186,7 @@ void ecran(String nom, {String? role, String destination = 'accueil', Future<voi
       await t.pumpWidget(const SizedBox());
       await t.pump(const Duration(minutes: 1));
       debugDisableShadows = true;
-      MiseAJour.i
-        ..publiee = null
-        ..correctifPret = false
-        ..reportee = false
-        ..correctifVu = false;
+      MiseAJour.i.reinitialiser();
     }
   });
 }
@@ -287,25 +283,38 @@ void main() {
     minimum: 0,
     notes: 'Cartes scolaires et tableau d’honneur plus rapides.',
   );
+  // Les étapes sont posées à la main : rien n'est téléchargé ni installé.
+  ecran('maj-telechargement', role: prof, gestes: (t) async {
+    MiseAJour.i
+      ..numeroInstalle = 2
+      ..publiee = nouvelle
+      ..etape = EtapeMiseAJour.telechargement
+      ..progression = 0.42
+      ..signaler();
+    await attendre(t, maximum: 1500);
+  });
   ecran('maj-bandeau', role: prof, gestes: (t) async {
     MiseAJour.i
       ..numeroInstalle = 2
       ..publiee = nouvelle
-      ..reafficher();
+      ..etape = EtapeMiseAJour.prete
+      ..signaler();
     await attendre(t);
   });
   ecran('maj-correctif', role: prof, gestes: (t) async {
     MiseAJour.i
       ..numeroInstalle = 3
       ..correctifPret = true
-      ..reafficher();
+      ..signaler();
     await attendre(t);
   });
   ecran('maj-obligatoire', role: prof, gestes: (t) async {
     MiseAJour.i
       ..numeroInstalle = 2
       ..publiee = const VersionPubliee(numero: 3, nom: '1.1.1', url: 'https://exemple.cm/a.apk', taille: 58245417, minimum: 3)
-      ..reafficher();
-    await attendre(t);
+      ..etape = EtapeMiseAJour.telechargement
+      ..progression = 0.42
+      ..signaler();
+    await attendre(t, maximum: 1500);
   });
 }

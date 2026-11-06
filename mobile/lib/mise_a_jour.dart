@@ -1,16 +1,19 @@
-// Mises à jour de l'application, de deux façons :
-// - nouvelle APK publiée sur GitHub (Releases) : téléchargée ici, puis installée par Android ;
+// Mises à jour de l'application, toutes automatiques :
+// - nouvelle APK publiée sur GitHub (Releases) : téléchargée d'office, puis installée par Android quand
+//   l'utilisateur quitte l'application (sans confirmation sur Android 12 et plus, quand Android l'accepte) ;
 // - correctif Shorebird : le code Dart est remplacé au prochain lancement, sans réinstaller.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
 
+import 'file_attente.dart';
 import 'journal.dart';
 
 /// Numéro de version Android (versionCode) de cette APK, fixé par le CI ; 0 pour une version locale.
@@ -65,7 +68,8 @@ class VersionPubliee {
   String get tailleLisible => taille <= 0 ? '' : '${(taille / 1048576).toStringAsFixed(1).replaceAll('.', ',')} Mo';
 }
 
-enum EtapeMiseAJour { attente, telechargement, installation }
+/// attente → telechargement → prete (APK complète sur le téléphone) → installation.
+enum EtapeMiseAJour { attente, telechargement, prete, installation }
 
 class _Echec implements Exception {
   _Echec(this.message);
@@ -75,9 +79,12 @@ class _Echec implements Exception {
   String toString() => message;
 }
 
-class MiseAJour extends ChangeNotifier {
+class MiseAJour extends ChangeNotifier with WidgetsBindingObserver {
   MiseAJour._();
   static final MiseAJour i = MiseAJour._();
+
+  /// Installation native (android/app/src/main/kotlin/…/MainActivity.kt).
+  static const _canal = MethodChannel('cetic/installation');
 
   // Créé seulement au premier usage : hors APK Shorebird (flutter run, tests), il ne fait rien.
   late final ShorebirdUpdater _shorebird = ShorebirdUpdater();
@@ -93,8 +100,16 @@ class MiseAJour extends ChangeNotifier {
   /// De 0 à 1 pendant le téléchargement.
   double? progression;
 
-  /// « Plus tard » : le bandeau revient au prochain lancement.
-  bool reportee = false;
+  /// Dernier échec du téléchargement ou de l'installation, affiché dans le bandeau.
+  String? erreur;
+
+  /// APK téléchargée et complète, prête à installer.
+  @visibleForTesting
+  File? apk;
+
+  /// Dernière installation lancée, et si c'était en arrière-plan (sans que l'utilisateur la voie).
+  DateTime? _dernierEssai;
+  bool _essaiEnArrierePlan = false;
 
   /// Correctif Shorebird téléchargé : il s'applique au prochain lancement.
   bool correctifPret = false;
@@ -102,15 +117,22 @@ class MiseAJour extends ChangeNotifier {
 
   bool get disponible => publiee?.plusRecenteQue(numeroInstalle) ?? false;
   bool get obligatoire => publiee?.exigeeSur(numeroInstalle) ?? false;
-  bool get bandeauVisible => !obligatoire && ((disponible && !reportee) || (correctifPret && !correctifVu));
+
+  /// Bandeau d'information : rien à décider, la mise à jour suit son cours toute seule.
+  bool get bandeauVisible => !obligatoire && (disponible || (correctifPret && !correctifVu));
 
   /// Au démarrage puis toutes les 6 heures ; ne bloque jamais l'interface.
   void demarrer() {
+    WidgetsBinding.instance.addObserver(this);
     unawaited(verifier());
     _minuterie ??= Timer.periodic(const Duration(hours: 6), (_) => verifier());
   }
 
-  Future<void> verifier() => Future.wait([_verifierApk(), _verifierCorrectif()]);
+  /// Vérifie, puis télécharge d'office la nouvelle version.
+  Future<void> verifier() async {
+    await Future.wait([_verifierApk(), _verifierCorrectif()]);
+    if (disponible && etape == EtapeMiseAJour.attente) unawaited(telecharger());
+  }
 
   Future<void> _verifierApk() async {
     if (!Platform.isAndroid || numeroInstalle == 0) return;
@@ -146,25 +168,50 @@ class MiseAJour extends ChangeNotifier {
     }
   }
 
-  void reporter() {
-    reportee = true;
+  void masquerCorrectif() {
     correctifVu = true;
     notifyListeners();
   }
 
-  /// « Rechercher une mise à jour » dans le menu : le bandeau reporté réapparaît.
-  void reafficher() {
-    reportee = false;
+  /// Pour les tests et les captures d'écran : redessine le bandeau après un réglage direct.
+  @visibleForTesting
+  void signaler() => notifyListeners();
+
+  /// Remet l'état de départ (tests et captures d'écran).
+  @visibleForTesting
+  void reinitialiser() {
+    publiee = null;
+    etape = EtapeMiseAJour.attente;
+    progression = null;
+    erreur = null;
+    apk = null;
+    _dernierEssai = null;
+    _essaiEnArrierePlan = false;
+    correctifPret = false;
     correctifVu = false;
-    notifyListeners();
   }
 
-  /// Télécharge l'APK puis ouvre l'installateur d'Android. Renvoie le message d'erreur, ou null.
-  Future<String?> installer() async {
+  /// L'installation se fait quand l'utilisateur quitte l'application : elle ne la ferme pas en pleine
+  /// saisie. Si Android a demandé une confirmation qu'il n'a pas pu afficher en arrière-plan, elle est
+  /// relancée au retour au premier plan, une fois.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (etape != EtapeMiseAJour.prete) return;
+    final recent = _dernierEssai != null && DateTime.now().difference(_dernierEssai!) < const Duration(minutes: 2);
+    if ((state == AppLifecycleState.paused || state == AppLifecycleState.hidden) && !recent) {
+      unawaited(installer(arrierePlan: true));
+    } else if (state == AppLifecycleState.resumed && _essaiEnArrierePlan) {
+      unawaited(installer());
+    }
+  }
+
+  /// Télécharge l'APK de la version publiée. Renvoie le message d'erreur, ou null.
+  Future<String?> telecharger() async {
     final v = publiee;
     if (v == null || etape != EtapeMiseAJour.attente) return null;
     etape = EtapeMiseAJour.telechargement;
     progression = 0;
+    erreur = null;
     notifyListeners();
     final client = http.Client();
     try {
@@ -178,19 +225,54 @@ class MiseAJour extends ChangeNotifier {
       }
       final dejaLa = v.taille > 0 && await fichier.exists() && await fichier.length() == v.taille;
       if (!dejaLa) await _telecharger(client, v, fichier);
-      etape = EtapeMiseAJour.installation;
+      apk = fichier;
+      etape = EtapeMiseAJour.prete;
+      noter('mise à jour : ${v.nom} téléchargée');
       notifyListeners();
-      final ouverture = await OpenFilex.open(fichier.path, type: 'application/vnd.android.package-archive');
-      if (ouverture.type != ResultType.done) throw _Echec(ouverture.message);
+      // Version trop ancienne pour le serveur : installation tout de suite.
+      if (obligatoire) unawaited(installer());
       return null;
     } catch (e) {
-      final message = e is TimeoutException ? 'le réseau est trop lent, réessayez plus tard' : '$e';
-      noter('mise à jour : échec ($message)');
-      return 'Mise à jour impossible : $message';
+      etape = EtapeMiseAJour.attente;
+      erreur = e is TimeoutException ? 'le réseau est trop lent, nouvel essai plus tard' : '$e';
+      noter('mise à jour : téléchargement interrompu ($erreur)');
+      return 'Mise à jour impossible : $erreur';
     } finally {
       client.close();
-      etape = EtapeMiseAJour.attente;
       progression = null;
+      notifyListeners();
+    }
+  }
+
+  /// Installe l'APK téléchargée. Les notes en attente partent d'abord si le réseau le permet ; celles
+  /// qui restent sont gardées, une mise à jour ne vide pas le téléphone. Renvoie le message d'erreur, ou null.
+  Future<String?> installer({bool arrierePlan = false}) async {
+    final fichier = apk;
+    if (fichier == null || etape != EtapeMiseAJour.prete) return null;
+    etape = EtapeMiseAJour.installation;
+    erreur = null;
+    _dernierEssai = DateTime.now();
+    _essaiEnArrierePlan = arrierePlan;
+    notifyListeners();
+    try {
+      if (FileAttente.i.envois.isNotEmpty) await FileAttente.i.synchroniser();
+      noter('mise à jour : installation${arrierePlan ? ' en arrière-plan' : ''}');
+      try {
+        await _canal.invokeMethod<bool>('installer', {'chemin': fichier.path});
+      } on MissingPluginException {
+        // APK sans le canal natif : l'installateur d'Android, comme avant.
+        final ouverture = await OpenFilex.open(fichier.path, type: 'application/vnd.android.package-archive');
+        if (ouverture.type != ResultType.done) throw _Echec(ouverture.message);
+      }
+      return null;
+    } catch (e) {
+      erreur = e is PlatformException ? (e.message ?? e.code) : '$e';
+      noter('mise à jour : installation impossible ($erreur)');
+      return 'Mise à jour impossible : $erreur';
+    } finally {
+      // Installation réussie : Android remplace l'application et ce code ne s'exécute plus. Sinon,
+      // l'APK reste prête pour le prochain essai.
+      etape = EtapeMiseAJour.prete;
       notifyListeners();
     }
   }

@@ -316,7 +316,7 @@ class _Tiroir extends StatelessWidget {
               await m.verifier();
               if (!context.mounted) return;
               if (m.disponible) {
-                m.reafficher();
+                // La mise à jour se télécharge d'elle-même : le bandeau, sous le menu, en suit l'avancement.
                 Navigator.pop(context);
               } else {
                 message(context, m.correctifPret ? 'Un correctif est prêt : fermez puis rouvrez l’application.' : 'L’application est à jour.');
