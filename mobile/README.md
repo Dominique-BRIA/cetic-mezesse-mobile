@@ -15,7 +15,7 @@ Android demande d'autoriser l'installation depuis le navigateur. Ensuite, l'appl
 Deux mécanismes, tous deux pilotés par le workflow **APK Android** (`.github/workflows/apk.yml`) à chaque push dans `mobile/` sur `main` :
 
 | Changement | Ce qu'il faut faire | Ce que voit l'utilisateur |
-|---|---|---|
+| --- | --- | --- |
 | Code Dart seulement (écrans, règles, textes) | Rien : pousser suffit, **une fois Shorebird activé** | Rien. Le correctif est téléchargé au lancement et appliqué au lancement suivant ; s'il arrive pendant l'utilisation, un bandeau propose de rouvrir l'application. |
 | Plugin, autorisation Android, logo, version de Flutter, ou Shorebird pas encore activé | Augmenter `version` dans `pubspec.yaml` (`1.1.0+2` → `1.1.1+3`) : le numéro après `+` doit toujours augmenter | Un bandeau « Nouvelle version » : un appui télécharge l'APK et ouvre l'installation d'Android. |
 
@@ -38,12 +38,17 @@ L'application vérifie `version.json` au démarrage puis toutes les 6 heures ; l
 
 Une seule fois, après la création du compte sur <https://console.shorebird.dev> :
 
-1. Installer l'outil en ligne de commande (PowerShell) :
+1. Installer l'outil en ligne de commande : environ 2,2 Go (outil, Flutter modifié et Dart). Le script officiel
+   (`irm https://shorebird.dev/install.ps1 | iex`) installe dans le dossier personnel, sur C:, et refuse s'il y a
+   moins de 3 Go libres. Sur ce poste, l'installer sur D: (PowerShell) :
 
    ```powershell
-   Set-ExecutionPolicy RemoteSigned -scope CurrentUser
-   iwr -UseBasicParsing 'https://raw.githubusercontent.com/shorebirdtech/install/main/install.ps1' | iex
+   git clone -b stable https://github.com/shorebirdtech/shorebird.git D:\Dev\shorebird
+   [Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";D:\Dev\shorebird\bin", "User")
    ```
+
+   Fermer et rouvrir le terminal, puis `shorebird doctor` (le premier lancement télécharge Flutter dans
+   `D:\Dev\shorebird\bin\cache`). Pour désinstaller : supprimer `D:\Dev\shorebird` et retirer son `bin` du Path.
 
 2. Dans `mobile/` : `shorebird login`, puis `shorebird init --display-name "CETIC Mezesse"`. Cela crée `shorebird.yaml` (identifiant de l'application) et l'ajoute aux assets de `pubspec.yaml`. Laisser `auto_update: true` et ne pas ajouter `patch_verification: install_only`.
 3. Commiter `shorebird.yaml` et `pubspec.yaml`.
