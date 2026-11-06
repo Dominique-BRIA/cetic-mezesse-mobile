@@ -22,6 +22,13 @@ figure { margin: 12px 0; text-align: center; break-inside: avoid; }
 figure img { max-width: 100%; max-height: 118mm; border: 1px solid #d6e1ec; border-radius: 6px; }
 figure.diagramme img { border: none; max-height: 200mm; }
 figure.telephone img { max-height: 120mm; }
+/* La même page sur le site et sur l'application mobile, côte à côte ; trois écrans du téléphone. */
+figure.duo, figure.trio { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 8px; }
+figure.duo figcaption, figure.trio figcaption { flex-basis: 100%; }
+figure.duo img { max-width: 70%; max-height: 110mm; }
+figure.duo img.mobile { max-width: 27%; }
+figure.telephone.duo img, figure.telephone.duo img.mobile { max-width: 48%; max-height: 105mm; }
+figure.trio img { max-width: 31%; max-height: 120mm; }
 figcaption { font-size: 9pt; color: #5b6676; margin-top: 4px; font-style: italic; }
 .garde { height: 255mm; display: flex; flex-direction: column; justify-content: space-between; text-align: center; }
 .garde .drapeau { display: flex; height: 8px; margin-bottom: 8mm; }
