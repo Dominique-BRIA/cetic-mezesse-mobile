@@ -36,9 +36,10 @@ figcaption { font-size: 9pt; color: #5b6676; margin-top: 4px; font-style: italic
 .garde .ue { display: inline-block; margin-top: 14px; padding: 5px 14px; border-radius: 4px; background: #1d5fa8; color: #fff; font-weight: 600; }
 .garde .bas { font-size: 10.5pt; color: #33415a; text-align: left; border-top: 2px solid #1d5fa8; padding-top: 10px; }
 .garde .bas td { border: none; padding: 3px 0; }
-.sommaire ol { list-style: none; margin-left: 0; }
-.sommaire li { display: flex; border-bottom: 1px dotted #c3cfdc; padding: 3px 0; }
-.sommaire li span:first-child { flex: 1; }
+/* Les lignes du sommaire seulement : les listes de l'encadré placé sous le sommaire restent des puces. */
+.sommaire > ol { list-style: none; margin-left: 0; }
+.sommaire > ol > li { display: flex; border-bottom: 1px dotted #c3cfdc; padding: 3px 0; }
+.sommaire > ol > li span:first-child { flex: 1; }
 .grille2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .carte { border: 1px solid #d6e1ec; border-radius: 8px; padding: 8px 10px; break-inside: avoid; }
 .carte b { color: #154a85; }
