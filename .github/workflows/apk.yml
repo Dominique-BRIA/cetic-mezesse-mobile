@@ -63,6 +63,8 @@ jobs:
           # Seulement si le compte Shorebird a plusieurs organisations (Settings > Variables : SHOREBIRD_ORG_ID).
           SHOREBIRD_ORG_ID: ${{ vars.SHOREBIRD_ORG_ID }}
         run: |
+          # shorebird init exige android/gradlew, que le dépôt ne garde pas : Flutter le recrée sans rien compiler.
+          flutter build apk --config-only
           shorebird init --display-name "CETIC Mezesse" ${SHOREBIRD_ORG_ID:+--org-id "$SHOREBIRD_ORG_ID"}
           if [ ! -f shorebird.yaml ]; then
             echo "::warning::shorebird init n'a pas créé shorebird.yaml : APK construite sans Shorebird."
