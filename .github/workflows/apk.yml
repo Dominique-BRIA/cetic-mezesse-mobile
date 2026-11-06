@@ -6,7 +6,8 @@ name: APK Android
 # - version déjà publiée avec Shorebird : correctif Shorebird de cette version (code Dart seulement),
 #   appliqué sur les téléphones au lancement suivant ;
 # - sinon : APK de contrôle en artefact, rien n'est distribué.
-# Shorebird s'active dès que mobile/shorebird.yaml (shorebird init) et le secret SHOREBIRD_TOKEN existent.
+# Shorebird s'active avec le seul secret SHOREBIRD_TOKEN : le premier run crée l'application chez Shorebird
+# (shorebird init) et commite mobile/shorebird.yaml. Rien n'est à installer sur le poste.
 on:
   push:
     branches: [main]
@@ -44,6 +45,38 @@ jobs:
         with:
           channel: stable
           cache: true
+      - run: flutter pub get
+
+      # Shorebird (près de 3 Go) s'installe ici, sur la machine de GitHub, jamais sur le poste.
+      - name: Shorebird
+        if: env.SHOREBIRD_TOKEN != ''
+        uses: shorebirdtech/setup-shorebird@v1
+        with:
+          cache: true
+
+      # Une seule fois : crée l'application chez Shorebird et commite shorebird.yaml sur la branche.
+      # En cas d'échec, la suite continue sans Shorebird (APK classique) et l'erreur reste visible.
+      - name: Initialisation de Shorebird
+        if: env.SHOREBIRD_TOKEN != '' && hashFiles('mobile/shorebird.yaml') == ''
+        continue-on-error: true
+        env:
+          # Seulement si le compte Shorebird a plusieurs organisations (Settings > Variables : SHOREBIRD_ORG_ID).
+          SHOREBIRD_ORG_ID: ${{ vars.SHOREBIRD_ORG_ID }}
+        run: |
+          shorebird init --display-name "CETIC Mezesse" ${SHOREBIRD_ORG_ID:+--org-id "$SHOREBIRD_ORG_ID"}
+          if [ ! -f shorebird.yaml ]; then
+            echo "::warning::shorebird init n'a pas créé shorebird.yaml : APK construite sans Shorebird."
+            exit 1
+          fi
+          cat shorebird.yaml
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "${GITHUB_ACTOR_ID}+${GITHUB_ACTOR}@users.noreply.github.com"
+          git add shorebird.yaml pubspec.yaml android/app/src/main/AndroidManifest.xml
+          git commit -m "Mobile : Shorebird initialisé" -m "Application créée chez Shorebird et shorebird.yaml ajouté par le workflow APK Android."
+          if ! git push origin "HEAD:$GITHUB_REF_NAME"; then
+            echo "::warning::shorebird.yaml n'a pas pu être poussé : commitez à la main le contenu affiché plus haut, sans relancer d'initialisation (elle créerait une seconde application)."
+            exit 1
+          fi
 
       - name: Version et mode de publication
         id: mode
@@ -102,16 +135,9 @@ jobs:
             echo "keyPassword=$KEY_PASSWORD"
           } > android/key.properties
 
-      - run: flutter pub get
       - run: flutter analyze --no-fatal-infos --no-fatal-warnings
       # Le démarrage ne doit jamais rester bloqué (test/demarrage_test.dart).
       - run: flutter test
-
-      - name: Shorebird
-        if: steps.mode.outputs.shorebird == 'oui' && steps.mode.outputs.mode != 'controle'
-        uses: shorebirdtech/setup-shorebird@v1
-        with:
-          cache: true
 
       - name: Construction de l'APK
         if: steps.mode.outputs.mode != 'patch'

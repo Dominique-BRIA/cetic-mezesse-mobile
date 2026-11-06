@@ -36,24 +36,14 @@ L'application vérifie `version.json` au démarrage puis toutes les 6 heures ; l
 
 ## Activer Shorebird
 
-Une seule fois, après la création du compte sur <https://console.shorebird.dev> :
+Rien à installer sur le poste : l'outil Shorebird (près de 3 Go) s'installe sur la machine de GitHub, à chaque run du workflow. Une seule fois, après la création du compte sur <https://console.shorebird.dev> :
 
-1. Installer l'outil en ligne de commande : environ 2,2 Go (outil, Flutter modifié et Dart). Le script officiel
-   (`irm https://shorebird.dev/install.ps1 | iex`) installe dans le dossier personnel, sur C:, et refuse s'il y a
-   moins de 3 Go libres. Sur ce poste, l'installer sur D: (PowerShell) :
+1. Dans la console Shorebird : Settings de l'organisation → Service accounts → créer un compte (rôle Developer) → Create key. Copier la clé dans GitHub : dépôt `cetic-mezesse-mobile` → Settings → Secrets and variables → Actions → New repository secret **`SHOREBIRD_TOKEN`**. (Les jetons de `shorebird login:ci` ne fonctionnent plus depuis le 1er octobre 2026.)
+2. Pousser sur `main` une version de `pubspec.yaml` pas encore publiée. Le workflow lance `shorebird init` (application « CETIC Mezesse »), commite `mobile/shorebird.yaml` sur `main`, puis publie la première APK Shorebird. Les téléphones l'installent par le bandeau ; à partir de là, les pushs sans changement de version deviennent des correctifs.
 
-   ```powershell
-   git clone -b stable https://github.com/shorebirdtech/shorebird.git D:\Dev\shorebird
-   [Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";D:\Dev\shorebird\bin", "User")
-   ```
+Si l'initialisation échoue (rôle insuffisant : passer le compte de service en Admin ; plusieurs organisations : variable `SHOREBIRD_ORG_ID`), le workflow le signale et publie une APK classique. Ne pas relancer d'initialisation une fois `shorebird.yaml` créé chez Shorebird : elle créerait une seconde application. Garder `auto_update: true` et ne pas ajouter `patch_verification: install_only`.
 
-   Fermer et rouvrir le terminal, puis `shorebird doctor` (le premier lancement télécharge Flutter dans
-   `D:\Dev\shorebird\bin\cache`). Pour désinstaller : supprimer `D:\Dev\shorebird` et retirer son `bin` du Path.
-
-2. Dans `mobile/` : `shorebird login`, puis `shorebird init --display-name "CETIC Mezesse"`. Cela crée `shorebird.yaml` (identifiant de l'application) et l'ajoute aux assets de `pubspec.yaml`. Laisser `auto_update: true` et ne pas ajouter `patch_verification: install_only`.
-3. Commiter `shorebird.yaml` et `pubspec.yaml`.
-4. Dans la console Shorebird : Settings de l'organisation → Service accounts → créer un compte (rôle Developer) → Create key. Copier la clé dans GitHub : dépôt `cetic-mezesse-mobile` → Settings → Secrets and variables → Actions → New repository secret **`SHOREBIRD_TOKEN`**. (Les jetons de `shorebird login:ci` ne fonctionnent plus depuis le 1er octobre 2026.)
-5. Augmenter `version` dans `pubspec.yaml` et pousser : cette Release est la première APK Shorebird. Les téléphones l'installent par le bandeau ; à partir de là, les pushs sans changement de version deviennent des correctifs.
+Pour travailler avec Shorebird en local (facultatif, environ 2,2 Go, 3 Go libres exigés) : `git clone -b stable https://github.com/shorebirdtech/shorebird.git D:\Dev\shorebird`, ajouter `D:\Dev\shorebird\bin` au Path, puis `shorebird doctor`. Le script officiel installe sur C:, trop plein sur ce poste.
 
 L'offre gratuite de Shorebird (Hobby) couvre 5 000 installations de correctifs par mois ; au-delà, les correctifs sont refusés jusqu'au mois suivant, et l'application continue de fonctionner avec la version installée. Les releases Shorebird sont construites avec Flutter 3.44.9 (`FLUTTER_SHOREBIRD` dans le workflow).
 
