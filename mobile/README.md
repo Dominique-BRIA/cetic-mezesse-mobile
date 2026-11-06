@@ -1,17 +1,61 @@
-# cetic_mezesse
+# Application mobile du CETIC de Mezesse
 
-Gestion scolaire du CETIC de Mezesse
+Application Android (Flutter) de gestion scolaire : mêmes écrans que le site, saisie des notes hors connexion.
 
-## Getting Started
+## Installer
 
-This project is a starting point for a Flutter application.
+Première installation, et seule installation à faire à la main : télécharger l'APK de la dernière version.
 
-A few resources to get you started if this is your first Flutter project:
+<https://github.com/Dominique-BRIA/cetic-mezesse-mobile/releases/latest/download/cetic-mezesse.apk>
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Android demande d'autoriser l'installation depuis le navigateur. Ensuite, l'application se met à jour d'elle-même.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Mises à jour
+
+Deux mécanismes, tous deux pilotés par le workflow **APK Android** (`.github/workflows/apk.yml`) à chaque push dans `mobile/` sur `main` :
+
+| Changement | Ce qu'il faut faire | Ce que voit l'utilisateur |
+|---|---|---|
+| Code Dart seulement (écrans, règles, textes) | Rien : pousser suffit, **une fois Shorebird activé** | Rien. Le correctif est téléchargé au lancement et appliqué au lancement suivant ; s'il arrive pendant l'utilisation, un bandeau propose de rouvrir l'application. |
+| Plugin, autorisation Android, logo, version de Flutter, ou Shorebird pas encore activé | Augmenter `version` dans `pubspec.yaml` (`1.1.0+2` → `1.1.1+3`) : le numéro après `+` doit toujours augmenter | Un bandeau « Nouvelle version » : un appui télécharge l'APK et ouvre l'installation d'Android. |
+
+Le workflow décide seul :
+
+- la version de `pubspec.yaml` n'a pas encore de Release GitHub : il construit l'APK et publie la Release `v<version>` avec `cetic-mezesse.apk` et `version.json` ;
+- elle a une Release construite avec Shorebird (fichier `shorebird.txt` joint) : il publie un correctif Shorebird de cette version ;
+- sinon : il construit une APK de contrôle, en artefact, sans rien distribuer.
+
+`mise-a-jour.json` règle la prochaine Release :
+
+- `notes` : le texte affiché dans le bandeau (à défaut, le titre du commit) ;
+- `minimum` : numéro de version (le nombre après `+`) en dessous duquel l'application refuse de servir et impose la mise à jour. À utiliser quand l'API change d'une façon que les anciennes versions ne savent pas gérer.
+
+L'application vérifie `version.json` au démarrage puis toutes les 6 heures ; le menu propose aussi « Rechercher une mise à jour ». Une version construite en local (`flutter run`) a le numéro 0 et ne propose jamais de mise à jour.
+
+**La clé de signature ne doit jamais changer** (secrets `ANDROID_KEYSTORE_*`, copie dans `D:\Cles`) : Android refuse d'installer par-dessus une APK signée avec une autre clé, et il faudrait désinstaller, ce qui efface les notes en attente.
+
+## Activer Shorebird
+
+Une seule fois, après la création du compte sur <https://console.shorebird.dev> :
+
+1. Installer l'outil en ligne de commande (PowerShell) :
+
+   ```powershell
+   Set-ExecutionPolicy RemoteSigned -scope CurrentUser
+   iwr -UseBasicParsing 'https://raw.githubusercontent.com/shorebirdtech/install/main/install.ps1' | iex
+   ```
+
+2. Dans `mobile/` : `shorebird login`, puis `shorebird init --display-name "CETIC Mezesse"`. Cela crée `shorebird.yaml` (identifiant de l'application) et l'ajoute aux assets de `pubspec.yaml`. Laisser `auto_update: true` et ne pas ajouter `patch_verification: install_only`.
+3. Commiter `shorebird.yaml` et `pubspec.yaml`.
+4. Dans la console Shorebird : Settings de l'organisation → Service accounts → créer un compte (rôle Developer) → Create key. Copier la clé dans GitHub : dépôt `cetic-mezesse-mobile` → Settings → Secrets and variables → Actions → New repository secret **`SHOREBIRD_TOKEN`**. (Les jetons de `shorebird login:ci` ne fonctionnent plus depuis le 1er octobre 2026.)
+5. Augmenter `version` dans `pubspec.yaml` et pousser : cette Release est la première APK Shorebird. Les téléphones l'installent par le bandeau ; à partir de là, les pushs sans changement de version deviennent des correctifs.
+
+L'offre gratuite de Shorebird (Hobby) couvre 5 000 installations de correctifs par mois ; au-delà, les correctifs sont refusés jusqu'au mois suivant, et l'application continue de fonctionner avec la version installée. Les releases Shorebird sont construites avec Flutter 3.44.9 (`FLUTTER_SHOREBIRD` dans le workflow).
+
+## Développer
+
+```bash
+flutter pub get
+flutter run --dart-define=API_URL=http://10.0.2.2:4000/api   # émulateur Android, API locale
+flutter test
+```

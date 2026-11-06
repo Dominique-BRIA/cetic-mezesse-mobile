@@ -1,5 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Mise à jour de l'application : installer l'APK téléchargée depuis les Releases GitHub.
+         Android demande une fois à l'utilisateur d'autoriser l'installation depuis cette application.
+         À retirer si l'application est un jour publiée sur le Play Store. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <application
         android:label="CETIC Mezesse"
         android:name="${applicationName}"

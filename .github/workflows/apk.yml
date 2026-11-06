@@ -1,10 +1,25 @@
 name: APK Android
 
+# À chaque push dans mobile/ sur main, selon la version de mobile/pubspec.yaml (« 1.1.0+2 ») :
+# - version jamais publiée : nouvelle APK, publiée en Release GitHub « v1.1.0+2 » avec version.json.
+#   L'application la propose d'elle-même (mobile/lib/mise_a_jour.dart) ;
+# - version déjà publiée avec Shorebird : correctif Shorebird de cette version (code Dart seulement),
+#   appliqué sur les téléphones au lancement suivant ;
+# - sinon : APK de contrôle en artefact, rien n'est distribué.
+# Shorebird s'active dès que mobile/shorebird.yaml (shorebird init) et le secret SHOREBIRD_TOKEN existent.
 on:
   push:
     branches: [main]
     paths: ['mobile/**', '.github/workflows/apk.yml']
   workflow_dispatch:
+
+# Créer les Releases et leurs tags.
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-android
+  cancel-in-progress: false
 
 jobs:
   apk:
@@ -12,6 +27,13 @@ jobs:
     defaults:
       run:
         working-directory: mobile
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+      # Version de Flutter des releases Shorebird ; un correctif reprend toujours celle de sa release.
+      FLUTTER_SHOREBIRD: 3.44.9
+      # L'adresse de l'API se règle dans Settings > Secrets and variables > Actions > Variables (API_URL)
+      API_URL: ${{ vars.API_URL || 'https://cetic-mezesse-api-dgfxfucegjg8gscb.francecentral-01.azurewebsites.net/api' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -22,7 +44,44 @@ jobs:
         with:
           channel: stable
           cache: true
+
+      - name: Version et mode de publication
+        id: mode
+        run: |
+          version=$(sed -n 's/^version: *\([^ #]*\).*/\1/p' pubspec.yaml)
+          nom=${version%%+*}
+          numero=${version##*+}
+          if ! [[ "$numero" =~ ^[0-9]+$ ]] || [ "$nom" = "$version" ]; then
+            echo "::error::La version de pubspec.yaml doit avoir la forme 1.2.0+5 : « $version »"
+            exit 1
+          fi
+          tag="v$version"
+          shorebird=non
+          if [ -f shorebird.yaml ] && [ -n "$SHOREBIRD_TOKEN" ]; then shorebird=oui; fi
+          if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            mode=release
+          elif [ "$shorebird" = oui ] && gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | grep -qx shorebird.txt; then
+            mode=patch
+          else
+            mode=controle
+          fi
+          case $mode in
+            release) echo "::notice::Nouvelle APK $version (Shorebird : $shorebird)" ;;
+            patch) echo "::notice::Correctif Shorebird de la version $version" ;;
+            controle) echo "::notice::Version $version déjà publiée sans Shorebird : APK de contrôle seulement. Augmentez la version de pubspec.yaml pour la distribuer." ;;
+          esac
+          {
+            echo "version=$version"
+            echo "nom=$nom"
+            echo "numero=$numero"
+            echo "tag=$tag"
+            echo "mode=$mode"
+            echo "shorebird=$shorebird"
+            echo "defines=--dart-define=VERSION=${GITHUB_SHA::7} --dart-define=API_URL=$API_URL --dart-define=BUILD=$numero --dart-define=NOM_VERSION=$nom"
+          } >> "$GITHUB_OUTPUT"
+
       # Clé de publication tirée des secrets du dépôt (Settings > Secrets and variables > Actions > Secrets).
+      # Elle ne doit jamais changer : Android refuse une mise à jour signée avec une autre clé.
       - name: Clé de signature
         env:
           KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -42,22 +101,79 @@ jobs:
             echo "keyAlias=$KEY_ALIAS"
             echo "keyPassword=$KEY_PASSWORD"
           } > android/key.properties
+
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos --no-fatal-warnings
       # Le démarrage ne doit jamais rester bloqué (test/demarrage_test.dart).
       - run: flutter test
-      # L'adresse de l'API se règle dans Settings > Secrets and variables > Actions > Variables (API_URL)
-      - run: flutter build apk --release --dart-define=VERSION=${GITHUB_SHA::7} --dart-define=API_URL=${{ vars.API_URL || 'https://cetic-mezesse-api-dgfxfucegjg8gscb.francecentral-01.azurewebsites.net/api' }}
+
+      - name: Shorebird
+        if: steps.mode.outputs.shorebird == 'oui' && steps.mode.outputs.mode != 'controle'
+        uses: shorebirdtech/setup-shorebird@v1
+        with:
+          cache: true
+
+      - name: Construction de l'APK
+        if: steps.mode.outputs.mode != 'patch'
+        run: |
+          if [ "${{ steps.mode.outputs.mode }}" = release ] && [ "${{ steps.mode.outputs.shorebird }}" = oui ]; then
+            # APK Shorebird : elle pourra recevoir les correctifs de cette version.
+            shorebird release android --artifact apk --flutter-version="$FLUTTER_SHOREBIRD" ${{ steps.mode.outputs.defines }}
+          else
+            flutter build apk --release ${{ steps.mode.outputs.defines }}
+          fi
+          apk=$(find build/app/outputs -name 'app-release.apk' | head -1)
+          if [ -z "$apk" ]; then
+            echo "::error::APK introuvable après la construction"
+            exit 1
+          fi
+          cp "$apk" cetic-mezesse.apk
+
       # Refuse un APK signé avec la clé de débogage.
       - name: Vérification de la signature
+        if: steps.mode.outputs.mode != 'patch'
         run: |
-          certificat=$(keytool -printcert -jarfile build/app/outputs/flutter-apk/app-release.apk)
+          certificat=$(keytool -printcert -jarfile cetic-mezesse.apk)
           echo "$certificat" | grep -E "Owner|Propriétaire|SHA256" || true
           if echo "$certificat" | grep -q "CN=Android Debug"; then
             echo "::error::L'APK est signé avec la clé de débogage."
             exit 1
           fi
+
+      - name: Publication de la Release
+        if: steps.mode.outputs.mode == 'release'
+        run: |
+          tag="${{ steps.mode.outputs.tag }}"
+          # Version minimale et notes : mobile/mise-a-jour.json ; à défaut, le titre du commit.
+          minimum=$(jq -r '.minimum // 0' mise-a-jour.json)
+          notes=$(jq -r '.notes // ""' mise-a-jour.json)
+          [ -n "$notes" ] || notes=$(git log -1 --format=%s)
+          jq -n \
+            --argjson numero "${{ steps.mode.outputs.numero }}" \
+            --arg nom "${{ steps.mode.outputs.nom }}" \
+            --arg url "https://github.com/$GITHUB_REPOSITORY/releases/download/${tag//+/%2B}/cetic-mezesse.apk" \
+            --argjson taille "$(stat -c%s cetic-mezesse.apk)" \
+            --argjson minimum "$minimum" \
+            --arg notes "$notes" \
+            --arg commit "${GITHUB_SHA::7}" \
+            --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{numero: $numero, nom: $nom, url: $url, taille: $taille, minimum: $minimum, notes: $notes, commit: $commit, date: $date}' > version.json
+          cat version.json
+          fichiers=(cetic-mezesse.apk version.json)
+          # Marque une APK Shorebird : les pushs suivants de cette version deviennent des correctifs.
+          if [ "${{ steps.mode.outputs.shorebird }}" = oui ]; then
+            echo "Construite avec Shorebird (Flutter $FLUTTER_SHOREBIRD)" > shorebird.txt
+            fichiers+=(shorebird.txt)
+          fi
+          gh release create "$tag" "${fichiers[@]}" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Version ${{ steps.mode.outputs.nom }} (${{ steps.mode.outputs.numero }})" --notes "$notes" --latest
+
+      - name: Correctif Shorebird
+        if: steps.mode.outputs.mode == 'patch'
+        run: shorebird patch android --release-version "${{ steps.mode.outputs.version }}" ${{ steps.mode.outputs.defines }}
+
       - uses: actions/upload-artifact@v4
+        if: steps.mode.outputs.mode != 'patch'
         with:
           name: cetic-mezesse-apk
-          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          path: mobile/cetic-mezesse.apk

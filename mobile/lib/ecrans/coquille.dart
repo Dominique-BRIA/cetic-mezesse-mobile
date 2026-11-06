@@ -4,6 +4,7 @@ import '../api.dart';
 import '../etat.dart';
 import '../file_attente.dart';
 import '../format.dart';
+import '../mise_a_jour.dart';
 import '../motif.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -287,9 +288,30 @@ class _Tiroir extends StatelessWidget {
               },
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 16, 10),
-            child: Text('Version $versionApp', style: TextStyle(fontSize: 11, color: c.encre3)),
+          InkWell(
+            onTap: () async {
+              final m = MiseAJour.i;
+              await m.verifier();
+              if (!context.mounted) return;
+              if (m.disponible) {
+                m.reafficher();
+                Navigator.pop(context);
+              } else {
+                message(context, m.correctifPret ? 'Un correctif est prêt : fermez puis rouvrez l’application.' : 'L’application est à jour.');
+              }
+            },
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 2, 16, 10),
+              child: Row(children: [
+                Expanded(
+                  child: Text(
+                    'Version ${nomVersion.isEmpty ? versionApp : '$nomVersion ($numeroVersion) · $versionApp'}',
+                    style: TextStyle(fontSize: 11, color: c.encre3),
+                  ),
+                ),
+                Text('Rechercher une mise à jour', style: TextStyle(fontSize: 11, color: c.encre2, decoration: TextDecoration.underline)),
+              ]),
+            ),
           ),
         ]),
       ),

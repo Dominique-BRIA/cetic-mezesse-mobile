@@ -16,7 +16,11 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+#
+# CETIC : augmenter ce numéro publie une nouvelle APK (Release GitHub), que l'application propose
+# d'installer. Sans changement, un push devient un correctif Shorebird (code Dart seulement).
+# Voir mobile/README.md, « Publier une mise à jour ».
+version: 1.1.0+2
 
 environment:
   sdk: ^3.12.2
@@ -43,6 +47,7 @@ dependencies:
   file_picker: ^13.1.0
   fl_chart: ^1.2.0
   path_drawing: ^1.0.1
+  shorebird_code_push: ^2.0.7
 
 dev_dependencies:
   flutter_test:

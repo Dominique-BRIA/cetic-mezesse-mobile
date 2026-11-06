@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'ecrans/coquille.dart';
 import 'ecrans/connexion.dart';
+import 'ecrans/mise_a_jour.dart';
 import 'etat.dart';
 import 'file_attente.dart';
 import 'journal.dart';
+import 'mise_a_jour.dart';
 import 'motif.dart';
 import 'theme.dart';
 
@@ -20,6 +22,8 @@ void main() {
       FlutterError.presentError(d);
     };
     Etat.i.demarrer();
+    // Nouvelle version ou correctif : vérifiés en arrière-plan, sans retarder l'ouverture.
+    MiseAJour.i.demarrer();
     // Nouvelle tentative d'envoi des notes en attente toutes les minutes.
     Timer.periodic(const Duration(minutes: 1), (_) {
       if (FileAttente.i.envois.isNotEmpty) FileAttente.i.synchroniser();
@@ -59,17 +63,23 @@ class Accueil extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Etat.i,
+      listenable: Listenable.merge([Etat.i, MiseAJour.i]),
       builder: (context, _) {
         final e = Etat.i;
         noter('écran : ${e.demarrage ? 'chargement' : e.utilisateur == null ? 'connexion' : 'accueil (${e.role})'}');
         if (e.demarrage) {
           return const MotifFond(child: Scaffold(body: Center(child: CircularProgressIndicator(strokeWidth: 2.5))));
         }
-        if (e.utilisateur == null) return const EcranConnexion();
-        if (e.utilisateur!['doitChangerMotDePasse'] == true) return const EcranMotDePasse(obligatoire: true);
-        return ValueListenableBuilder(valueListenable: Api.i.horsLigne, builder: (_, _, _) => const Coquille());
+        if (MiseAJour.i.obligatoire) return const EcranMiseAJourObligatoire();
+        // Le bandeau de mise à jour reste visible sous tous les écrans, connexion comprise.
+        return Column(children: [Expanded(child: _ecran(e)), const BandeauMiseAJour()]);
       },
     );
+  }
+
+  Widget _ecran(Etat e) {
+    if (e.utilisateur == null) return const EcranConnexion();
+    if (e.utilisateur!['doitChangerMotDePasse'] == true) return const EcranMotDePasse(obligatoire: true);
+    return ValueListenableBuilder(valueListenable: Api.i.horsLigne, builder: (_, _, _) => const Coquille());
   }
 }
