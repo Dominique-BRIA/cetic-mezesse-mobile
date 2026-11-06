@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../api.dart';
 import '../etat.dart';
@@ -65,6 +66,20 @@ final ValueNotifier<String> destinationCourante = ValueNotifier('accueil');
 /// Incrémenté par le bouton « Actualiser » : l'écran affiché est reconstruit et recharge ses données.
 final ValueNotifier<int> versionEcran = ValueNotifier(0);
 
+final _echafaudage = GlobalKey<ScaffoldState>();
+
+/// Bouton retour d'Android : il ouvre le menu ; menu ouvert, il quitte l'application. Les écrans
+/// ouverts par-dessus (fiche, profil, fenêtres) se ferment comme d'habitude.
+void retour() {
+  final s = _echafaudage.currentState;
+  if (s == null) return;
+  if (s.isDrawerOpen) {
+    SystemNavigator.pop();
+  } else {
+    s.openDrawer();
+  }
+}
+
 class Coquille extends StatelessWidget {
   const Coquille({super.key});
 
@@ -77,48 +92,55 @@ class Coquille extends StatelessWidget {
         final e = Etat.i;
         final visibles = destinations.where((d) => d.roles.contains(e.role)).toList();
         final d = visibles.firstWhere((x) => x.cle == cle, orElse: () => visibles.first);
-        return MotifFond(
-          child: Scaffold(
-            appBar: AppBar(
-              title: Text(d.libelle),
-              actions: [
-                IconButton(
-                  tooltip: 'Actualiser',
-                  icon: const Icon(Icons.refresh),
-                  onPressed: () => versionEcran.value++,
-                ),
-                ClocheNotifications(
-                  ouvrir: (cle) {
-                    if (visibles.any((x) => x.cle == cle)) destinationCourante.value = cle;
-                  },
-                ),
-                ListenableBuilder(
-                  listenable: FileAttente.i,
-                  builder: (_, __) => FileAttente.i.envois.isEmpty
-                      ? const SizedBox()
-                      : TextButton.icon(
-                          onPressed: () => _ouvrirFile(context),
-                          icon: const Icon(Icons.cloud_upload_outlined, size: 20),
-                          label: Text('${FileAttente.i.nombreNotes}'),
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (aQuitte, _) {
+            if (!aQuitte) retour();
+          },
+          child: MotifFond(
+            child: Scaffold(
+              key: _echafaudage,
+              appBar: AppBar(
+                title: Text(d.libelle),
+                actions: [
+                  IconButton(
+                    tooltip: 'Actualiser',
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () => versionEcran.value++,
+                  ),
+                  ClocheNotifications(
+                    ouvrir: (cle) {
+                      if (visibles.any((x) => x.cle == cle)) destinationCourante.value = cle;
+                    },
+                  ),
+                  ListenableBuilder(
+                    listenable: FileAttente.i,
+                    builder: (_, __) => FileAttente.i.envois.isEmpty
+                        ? const SizedBox()
+                        : TextButton.icon(
+                            onPressed: () => _ouvrirFile(context),
+                            icon: const Icon(Icons.cloud_upload_outlined, size: 20),
+                            label: Text('${FileAttente.i.nombreNotes}'),
+                          ),
+                  ),
+                ],
+                bottom: Api.i.horsLigne.value
+                    ? PreferredSize(
+                        preferredSize: const Size.fromHeight(28),
+                        child: Container(
+                          height: 28,
+                          width: double.infinity,
+                          alignment: Alignment.center,
+                          color: context.c.alerte.withValues(alpha: 0.15),
+                          child: Text('Hors connexion : données de la dernière synchronisation',
+                              style: TextStyle(fontSize: 12, color: context.c.alerte, fontWeight: FontWeight.w600)),
                         ),
-                ),
-              ],
-              bottom: Api.i.horsLigne.value
-                  ? PreferredSize(
-                      preferredSize: const Size.fromHeight(28),
-                      child: Container(
-                        height: 28,
-                        width: double.infinity,
-                        alignment: Alignment.center,
-                        color: context.c.alerte.withValues(alpha: 0.15),
-                        child: Text('Hors connexion : données de la dernière synchronisation',
-                            style: TextStyle(fontSize: 12, color: context.c.alerte, fontWeight: FontWeight.w600)),
-                      ),
-                    )
-                  : null,
+                      )
+                    : null,
+              ),
+              drawer: _Tiroir(visibles: visibles, courante: d.cle),
+              body: KeyedSubtree(key: ValueKey('${d.cle}-${Api.i.anneeId}-${versionEcran.value}'), child: d.ecran()),
             ),
-            drawer: _Tiroir(visibles: visibles, courante: d.cle),
-            body: KeyedSubtree(key: ValueKey('${d.cle}-${Api.i.anneeId}-${versionEcran.value}'), child: d.ecran()),
           ),
         );
       },
