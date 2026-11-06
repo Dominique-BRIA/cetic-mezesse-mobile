@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 // Mêmes couleurs que le client web (dépôt cetic-mezesse-web, src/styles.css).
@@ -84,6 +85,10 @@ ThemeData construireTheme(Brightness b) {
     outlineVariant: c.bord,
   );
   final bordure = OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: c.bord));
+  // Police du reste de l'application (Roboto sur Android) : le titre de la barre et le texte des boutons
+  // remplacent le style par défaut en entier, ils doivent la reprendre eux-mêmes.
+  final police = Typography.material2021(platform: defaultTargetPlatform).black.bodyMedium!.fontFamily;
+  final texteBouton = TextStyle(fontFamily: police, fontWeight: FontWeight.w600);
   return ThemeData(
     useMaterial3: true,
     brightness: b,
@@ -97,7 +102,7 @@ ThemeData construireTheme(Brightness b) {
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
       shape: Border(bottom: BorderSide(color: c.bord)),
-      titleTextStyle: TextStyle(color: encre, fontSize: 17, fontWeight: FontWeight.w700),
+      titleTextStyle: TextStyle(fontFamily: police, color: encre, fontSize: 17, fontWeight: FontWeight.w700),
     ),
     drawerTheme: DrawerThemeData(backgroundColor: surface, surfaceTintColor: Colors.transparent, shape: const RoundedRectangleBorder()),
     cardTheme: CardThemeData(
@@ -124,7 +129,7 @@ ThemeData construireTheme(Brightness b) {
       style: FilledButton.styleFrom(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        textStyle: texteBouton,
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -133,11 +138,11 @@ ThemeData construireTheme(Brightness b) {
         side: BorderSide(color: c.bord),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        textStyle: texteBouton,
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(textStyle: const TextStyle(fontWeight: FontWeight.w600)),
+      style: TextButton.styleFrom(textStyle: texteBouton),
     ),
     snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
     listTileTheme: ListTileThemeData(iconColor: c.encre2, dense: true),
