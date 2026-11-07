@@ -49,6 +49,8 @@ android {
             // Sans key.properties, on retombe sur la clé de débogage pour pouvoir tester en local ;
             // le workflow GitHub, lui, refuse de publier un APK signé ainsi.
             signingConfig = signingConfigs.getByName(if (fichierCle.exists()) "release" else "debug")
+            // Règles R8 propres à l'application (WorkManager : voir le fichier).
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 }
