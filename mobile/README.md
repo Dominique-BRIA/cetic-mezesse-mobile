@@ -17,7 +17,7 @@ Deux mécanismes, tous deux pilotés par le workflow **APK Android** (`.github/w
 | Changement | Ce qu'il faut faire | Ce que voit l'utilisateur |
 | --- | --- | --- |
 | Code Dart seulement (écrans, règles, textes) | Rien : pousser suffit, **une fois Shorebird activé** | Rien. Le correctif est téléchargé au lancement et appliqué au lancement suivant ; s'il arrive pendant l'utilisation, un bandeau propose de rouvrir l'application. |
-| Plugin, autorisation Android, logo, version de Flutter, ou Shorebird pas encore activé | Augmenter `version` dans `pubspec.yaml` (`1.1.0+2` → `1.1.1+3`) : le numéro après `+` doit toujours augmenter | Rien : l'APK se télécharge d'elle-même et s'installe quand l'utilisateur quitte l'application, sans confirmation sur Android 12 et plus quand Android l'accepte, sinon par l'écran « Mettre à jour » d'Android (un appui). |
+| Plugin, autorisation Android, logo, version de Flutter, ou Shorebird pas encore activé | Augmenter `version` dans `pubspec.yaml` (`1.1.0+2` → `1.1.1+3`) : le numéro après `+` doit toujours augmenter | Rien : l'APK se télécharge d'elle-même, même application fermée (tâche de fond toutes les 6 heures environ), et s'installe aussitôt, ou quand l'utilisateur quitte l'application s'il s'en sert, sans confirmation sur Android 12 et plus quand Android l'accepte, sinon par l'écran « Mettre à jour » d'Android (un appui). |
 
 Le workflow décide seul :
 

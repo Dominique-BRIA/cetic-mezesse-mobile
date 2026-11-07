@@ -62,3 +62,9 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Vérification et téléchargement des mises à jour en arrière-plan, application fermée
+    // (VerificationMiseAJour.kt).
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
+}

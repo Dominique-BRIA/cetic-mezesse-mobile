@@ -1,6 +1,7 @@
 // Mises à jour de l'application, toutes automatiques :
 // - nouvelle APK publiée sur GitHub (Releases) : téléchargée d'office, puis installée par Android quand
-//   l'utilisateur quitte l'application (sans confirmation sur Android 12 et plus, quand Android l'accepte) ;
+//   l'utilisateur quitte l'application (sans confirmation sur Android 12 et plus, quand Android l'accepte).
+//   Application fermée, la tâche de fond VerificationMiseAJour.kt fait de même et dépose l'APK au même endroit ;
 // - correctif Shorebird : le code Dart est remplacé au prochain lancement, sans réinstaller.
 import 'dart:async';
 import 'dart:convert';
