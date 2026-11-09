@@ -36,6 +36,11 @@ class VerificationMiseAJour(context: Context, parametres: WorkerParameters) : Wo
             val fiche = JSONObject(lireTexte(ADRESSE_FICHE))
             val numero = fiche.getLong("numero")
             if (numero <= versionInstallee(contexte)) return Result.success()
+            // Politique réglée depuis la console technique ; illisible, rien n'est téléchargé (nouvel essai plus tard).
+            val politique = JSONObject(lireTexte("${Telemetrie.API}/mises-a-jour/politique"))
+            val bloquees = politique.optJSONArray("versionsBloquees")
+            val bloquee = bloquees != null && (0 until bloquees.length()).any { bloquees.optLong(it) == numero }
+            if (politique.optBoolean("suspendue") || bloquee) return Result.success()
             val taille = fiche.optLong("taille", 0)
             val apk = File(contexte.cacheDir, "cetic-mezesse-$numero.apk")
             if (!(taille > 0 && apk.exists() && apk.length() == taille)) telecharger(fiche.getString("url"), apk, taille)

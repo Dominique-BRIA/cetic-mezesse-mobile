@@ -1,5 +1,6 @@
 package cm.cetic.mezesse.cetic_mezesse
 
+import android.os.Build
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -45,6 +46,14 @@ class MainActivity : FlutterActivity() {
                         resultat.error("installation", e.message ?: e.toString(), null)
                     }
                 }
+                // Ce que l'application signale à la console technique (lib/signalement.dart).
+                "identite" -> resultat.success(
+                    mapOf(
+                        "installationId" to Telemetrie.installationId(this),
+                        "modele" to Build.MODEL,
+                        "versionAndroid" to Build.VERSION.RELEASE,
+                    ),
+                )
                 else -> resultat.notImplemented()
             }
         }

@@ -14,6 +14,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
 
+import 'api.dart';
 import 'file_attente.dart';
 import 'journal.dart';
 
@@ -67,6 +68,32 @@ class VersionPubliee {
 
   /// « 18,4 Mo ».
   String get tailleLisible => taille <= 0 ? '' : '${(taille / 1048576).toStringAsFixed(1).replaceAll('.', ',')} Mo';
+}
+
+/// Politique réglée depuis la console technique, lue avant chaque téléchargement.
+class PolitiqueMiseAJour {
+  const PolitiqueMiseAJour({this.suspendue = false, this.versionsBloquees = const [], this.minimum = 0});
+
+  final bool suspendue;
+  final List<int> versionsBloquees;
+  final int minimum;
+
+  /// null si la réponse est inattendue : sans politique lisible, rien n'est téléchargé.
+  static PolitiqueMiseAJour? depuisJson(Object? j) {
+    if (j is! Map || j['suspendue'] is! bool || j['versionsBloquees'] is! List || j['minimum'] is! int) return null;
+    return PolitiqueMiseAJour(
+      suspendue: j['suspendue'] as bool,
+      versionsBloquees: (j['versionsBloquees'] as List).whereType<int>().toList(),
+      minimum: j['minimum'] as int,
+    );
+  }
+
+  /// La version à proposer, ou null si elle est écartée. Le plus élevé des deux minimums s'applique.
+  VersionPubliee? appliquer(VersionPubliee v) {
+    if (suspendue || versionsBloquees.contains(v.numero)) return null;
+    if (minimum <= v.minimum) return v;
+    return VersionPubliee(numero: v.numero, nom: v.nom, url: v.url, taille: v.taille, minimum: minimum, notes: v.notes);
+  }
 }
 
 /// attente → telechargement → prete (APK complète sur le téléphone) → installation.
@@ -140,14 +167,61 @@ class MiseAJour extends ChangeNotifier with WidgetsBindingObserver {
     try {
       final r = await http.get(Uri.parse(adresseFiche)).timeout(const Duration(seconds: 20));
       if (r.statusCode != 200) return;
-      final v = VersionPubliee.depuisJson(jsonDecode(utf8.decode(r.bodyBytes)));
-      if (v == null) return;
-      publiee = v;
-      noter('mise à jour : publiée ${v.nom} (${v.numero}), installée $nomVersion ($numeroInstalle)');
-      notifyListeners();
+      final fiche = VersionPubliee.depuisJson(jsonDecode(utf8.decode(r.bodyBytes)));
+      if (fiche == null) return;
+      final politique = await _lirePolitique();
+      if (politique == null) return;
+      appliquerPolitique(fiche, politique);
     } catch (e) {
       // Pas de réseau ou GitHub injoignable : on réessaiera plus tard, sans rien afficher.
       noter('mise à jour : vérification impossible ($e)');
+    }
+  }
+
+  /// null si le serveur ne répond pas : sans politique lisible, rien n'est téléchargé ni installé.
+  Future<PolitiqueMiseAJour?> _lirePolitique() async {
+    try {
+      final r = await http.get(Uri.parse('${Api.base}/mises-a-jour/politique')).timeout(const Duration(seconds: 20));
+      return r.statusCode == 200 ? PolitiqueMiseAJour.depuisJson(jsonDecode(utf8.decode(r.bodyBytes))) : null;
+    } catch (e) {
+      noter('mise à jour : politique illisible ($e)');
+      return null;
+    }
+  }
+
+  /// Relue juste avant d'installer : une APK téléchargée depuis des heures peut avoir été bloquée entre-temps.
+  Future<bool> _toujoursPermise() async {
+    final v = publiee;
+    if (!Platform.isAndroid || v == null) return true;
+    final politique = await _lirePolitique();
+    if (politique == null) return false;
+    appliquerPolitique(v, politique);
+    return publiee != null;
+  }
+
+  /// Une version écartée n'est plus proposée ; déjà téléchargée, elle ne s'installera pas.
+  @visibleForTesting
+  void appliquerPolitique(VersionPubliee fiche, PolitiqueMiseAJour politique) {
+    final v = politique.appliquer(fiche);
+    if (v == null) {
+      noter('mise à jour : version ${fiche.nom} écartée par la politique');
+      if (etape == EtapeMiseAJour.telechargement || etape == EtapeMiseAJour.installation) return;
+      publiee = null;
+      apk = null;
+      etape = EtapeMiseAJour.attente;
+    } else {
+      publiee = v;
+      noter('mise à jour : publiée ${v.nom} (${v.numero}), installée $nomVersion ($numeroInstalle)');
+    }
+    notifyListeners();
+  }
+
+  /// Numéro du correctif Shorebird en cours ; null s'il n'y en a pas.
+  Future<int?> correctifActuel() async {
+    try {
+      return _shorebird.isAvailable ? (await _shorebird.readCurrentPatch())?.number : null;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -250,6 +324,7 @@ class MiseAJour extends ChangeNotifier with WidgetsBindingObserver {
   Future<String?> installer({bool arrierePlan = false}) async {
     final fichier = apk;
     if (fichier == null || etape != EtapeMiseAJour.prete) return null;
+    if (!await _toujoursPermise() || etape != EtapeMiseAJour.prete) return null;
     etape = EtapeMiseAJour.installation;
     erreur = null;
     _dernierEssai = DateTime.now();

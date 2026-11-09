@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'file_attente.dart';
 import 'journal.dart';
+import 'signalement.dart';
 
 class Etat extends ChangeNotifier {
   Etat._();
@@ -112,6 +113,7 @@ class Etat extends ChangeNotifier {
       FileAttente.i.synchroniser();
       notifyListeners();
       unawaited(prechargerEcrans());
+      unawaited(Signalement.signal());
     } on ErreurApi {
       // hors ligne : on garde la copie ; une session expirée est traitée par surSessionExpiree
     }

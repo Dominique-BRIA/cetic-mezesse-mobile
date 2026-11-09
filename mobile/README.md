@@ -34,6 +34,10 @@ L'application vérifie `version.json` au démarrage puis toutes les 6 heures ; l
 
 **La clé de signature ne doit jamais changer** (secrets `ANDROID_KEYSTORE_*`, copie dans `D:\Cles`) : Android refuse d'installer par-dessus une APK signée avec une autre clé, et il faudrait désinstaller, ce qui efface les notes en attente.
 
+## Console technique
+
+L'application signale sa version à chaque ouverture et remonte ses plantages, y compris ceux du tout début du lancement (`CapturePlantages.kt`). Avant de télécharger ou d'installer une APK, elle lit la politique réglée depuis la console ([cetic-mezesse-console](../../cetic-mezesse-console)) : suspension, version bloquée, version minimale. Si le serveur ne répond pas, rien n'est téléchargé. **L'API doit donc être déployée avant cette version de l'application.**
+
 ## Activer Shorebird
 
 Rien à installer sur le poste : l'outil Shorebird (près de 3 Go) s'installe sur la machine de GitHub, à chaque run du workflow. Une seule fois, après la création du compte sur <https://console.shorebird.dev> :

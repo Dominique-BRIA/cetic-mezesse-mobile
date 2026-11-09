@@ -11,6 +11,7 @@ import 'file_attente.dart';
 import 'journal.dart';
 import 'mise_a_jour.dart';
 import 'motif.dart';
+import 'signalement.dart';
 import 'theme.dart';
 
 void main() {
@@ -20,6 +21,7 @@ void main() {
     FlutterError.onError = (d) {
       noter('ERREUR Flutter : ${d.exceptionAsString()}');
       FlutterError.presentError(d);
+      unawaited(Signalement.plantage('FLUTTER', d.exceptionAsString(), d.stack?.toString()));
     };
     Etat.i.demarrer();
     // Nouvelle version ou correctif : vérifiés en arrière-plan, sans retarder l'ouverture.
@@ -30,7 +32,10 @@ void main() {
     });
     runApp(const Application());
     noter('main : interface lancée');
-  }, (e, pile) => noter('ERREUR non interceptée : $e'));
+  }, (e, pile) {
+    noter('ERREUR non interceptée : $e');
+    unawaited(Signalement.plantage('DART', '$e', pile.toString()));
+  });
 }
 
 class Application extends StatelessWidget {
