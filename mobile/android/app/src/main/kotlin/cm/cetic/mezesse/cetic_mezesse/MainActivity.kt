@@ -1,5 +1,7 @@
 package cm.cetic.mezesse.cetic_mezesse
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.os.Build
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
@@ -22,6 +24,16 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         VerificationMiseAJour.planifier(this)
+        creerCanalNotifications()
+    }
+
+    /** Canal des notifications push (Android 8 et plus) : priorité haute, pour qu'elles s'affichent en bandeau. */
+    private fun creerCanalNotifications() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val canal = NotificationChannel("cetic_notifications", "Notifications CETIC", NotificationManager.IMPORTANCE_HIGH).apply {
+            description = "Saisie des notes, décisions et rappels de l'établissement"
+        }
+        getSystemService(NotificationManager::class.java)?.createNotificationChannel(canal)
     }
 
     override fun onResume() {

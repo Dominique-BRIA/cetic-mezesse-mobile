@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../api.dart';
+import '../doublons.dart';
 import '../etat.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'saisie_eleves.dart';
+import 'verification.dart';
 
 class EcranEleves extends StatefulWidget {
   const EcranEleves({super.key});
@@ -170,7 +172,8 @@ Future<bool> importerEleves(BuildContext context, List<Map<String, dynamic>> cla
                 final chemin = r.isEmpty ? null : r.single.path;
                 if (chemin == null || !ctx.mounted) return;
                 final fait = await agir(ctx, () async {
-                  final rep = await Api.i.televerser('/eleves/import', 'fichier', File(chemin), champs: {'classeId': classe});
+                  final rep = await envoyerVerifie(
+                      ctx, (e) => Api.i.televerser('/eleves/import', 'fichier', File(chemin), champs: {'classeId': classe}, entetes: e));
                   if (ctx.mounted) message(ctx, rep['message'] as String);
                 });
                 if (fait && ctx.mounted) Navigator.pop(ctx, true);
@@ -274,6 +277,14 @@ class _FicheEleveState extends State<FicheEleve> {
                       final ok = await Navigator.push<bool>(
                           context, MaterialPageRoute(builder: (_) => FormEleve(classes: classes, eleve: e, inscription: actuelle)));
                       if (ok == true) setState(() => _version++);
+                    },
+                  ),
+                if (etat.estSG || etat.estProviseur)
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.merge_type, size: 18),
+                    label: const Text('Fusionner…'),
+                    onPressed: () async {
+                      if (await fusionnerEleve(context, widget.id, '${e['nom']} ${e['prenoms']}')) setState(() => _version++);
                     },
                   ),
                 if (etat.estProviseur && actuelle['statut'] == 'ACTIF')
@@ -454,6 +465,7 @@ class FormEleve extends StatefulWidget {
 }
 
 class _FormEleveState extends State<FormEleve> {
+  final _cle = nouvelleCleEnvoi();
   late final Map<String, TextEditingController> _t;
   late String _sexe;
   late String _classe;
@@ -494,13 +506,15 @@ class _FormEleveState extends State<FormEleve> {
     };
     try {
       if (widget.eleve == null) {
-        final r = await Api.i.post('/eleves', corps);
+        final r = await envoyerVerifie(context, (e) => Api.i.envoyer('POST', '/eleves', corps: corps, entetes: e), cle: _cle);
         if (mounted) message(context, 'Élève créé, matricule ${r['matricule']}.');
       } else {
-        await Api.i.put('/eleves/${widget.eleve!['id']}', corps);
+        await envoyerVerifie(context, (e) => Api.i.envoyer('PUT', '/eleves/${widget.eleve!['id']}', corps: corps, entetes: e), cle: _cle);
         if (mounted) message(context, 'Élève modifié.');
       }
       if (mounted) Navigator.pop(context, true);
+    } on Abandon {
+      // renoncé après l'avertissement de doublon
     } on ErreurApi catch (e) {
       setState(() => _erreur = e.message);
     } finally {

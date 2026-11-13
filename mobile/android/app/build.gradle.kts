@@ -65,6 +65,12 @@ flutter {
     source = "../.."
 }
 
+// Notifications push : la configuration Firebase (google-services.json) est écrite par le workflow à partir
+// d'un secret. Sans elle, l'APK se construit comme avant et les notifications push restent inactives.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 dependencies {
     // Vérification et téléchargement des mises à jour en arrière-plan, application fermée
     // (VerificationMiseAJour.kt).

@@ -10,6 +10,7 @@ import 'etat.dart';
 import 'file_attente.dart';
 import 'journal.dart';
 import 'mise_a_jour.dart';
+import 'push.dart';
 import 'motif.dart';
 import 'signalement.dart';
 import 'theme.dart';
@@ -26,6 +27,9 @@ void main() {
     Etat.i.demarrer();
     // Nouvelle version ou correctif : vérifiés en arrière-plan, sans retarder l'ouverture.
     MiseAJour.i.demarrer();
+    // Notifications push : un jeton neuf est aussitôt renvoyé à l'API avec le signal.
+    Push.surNouveauJeton = () => unawaited(Signalement.signal());
+    unawaited(Push.demarrer());
     // Nouvelle tentative d'envoi des notes en attente toutes les minutes.
     Timer.periodic(const Duration(minutes: 1), (_) {
       if (FileAttente.i.envois.isNotEmpty) FileAttente.i.synchroniser();

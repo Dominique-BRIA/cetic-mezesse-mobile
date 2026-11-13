@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'api.dart';
 import 'journal.dart';
 import 'mise_a_jour.dart';
+import 'push.dart';
 
 class Signalement {
   Signalement._();
@@ -34,14 +35,30 @@ class Signalement {
     try {
       final identite = await _lireIdentite();
       if (identite == null) return;
+      final jetonPush = await Push.jeton();
       await Api.i.envoyer('POST', '/appareils/signal', annee: false, corps: {
         ...identite,
         'numeroVersion': numeroVersion,
         'nomVersion': nomVersion,
         'correctif': await MiseAJour.i.correctifActuel(),
+        if (jetonPush != null) 'jetonPush': jetonPush,
       });
     } catch (e) {
       noter('signal : $e');
+    }
+  }
+
+  /// À la déconnexion volontaire : ce téléphone ne reçoit plus les notifications du compte.
+  static Future<void> detacher() async {
+    if (Api.i.jeton == null) return;
+    try {
+      final identite = await _lireIdentite();
+      if (identite == null) return;
+      await Api.i
+          .envoyer('POST', '/appareils/detacher', annee: false, corps: {'installationId': identite['installationId']})
+          .timeout(const Duration(seconds: 8));
+    } catch (e) {
+      noter('détachement : $e');
     }
   }
 

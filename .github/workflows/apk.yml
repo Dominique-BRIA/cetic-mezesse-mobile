@@ -12,7 +12,13 @@ on:
   push:
     branches: [main]
     paths: ['mobile/**', '.github/workflows/apk.yml']
+  # Lancement à la main (onglet Actions > APK Android > Run workflow), sur n'importe quelle branche.
   workflow_dispatch:
+    inputs:
+      controle:
+        description: "APK de contrôle seulement : construite et téléchargeable, rien n'est publié ni envoyé aux téléphones"
+        type: boolean
+        default: true
 
 # Créer les Releases et leurs tags.
 permissions:
@@ -93,7 +99,10 @@ jobs:
           tag="v$version"
           shorebird=non
           if [ -f shorebird.yaml ] && [ -n "$SHOREBIRD_TOKEN" ]; then shorebird=oui; fi
-          if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          if [ "${{ inputs.controle }}" = true ]; then
+            # Essai sur un téléphone avant de publier : l'APK reste dans les artefacts du run.
+            mode=controle
+          elif ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             mode=release
           elif [ "$shorebird" = oui ] && gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | grep -qx shorebird.txt; then
             mode=patch
@@ -103,7 +112,7 @@ jobs:
           case $mode in
             release) echo "::notice::Nouvelle APK $version (Shorebird : $shorebird)" ;;
             patch) echo "::notice::Correctif Shorebird de la version $version" ;;
-            controle) echo "::notice::Version $version déjà publiée sans Shorebird : APK de contrôle seulement. Augmentez la version de pubspec.yaml pour la distribuer." ;;
+            controle) echo "::notice::APK de contrôle $version : rien n'est publié (lancement à la main, ou version déjà publiée sans Shorebird)." ;;
           esac
           {
             echo "version=$version"
@@ -136,6 +145,27 @@ jobs:
             echo "keyAlias=$KEY_ALIAS"
             echo "keyPassword=$KEY_PASSWORD"
           } > android/key.properties
+
+      # Notifications push : configuration Firebase (console Firebase > Paramètres du projet > Android),
+      # dans le secret GOOGLE_SERVICES_JSON, telle quelle ou en base 64. Sans elle, l'APK se construit
+      # comme avant et les notifications push restent inactives. Elle doit rester la même d'une version
+      # à l'autre : un correctif Shorebird est refusé si la partie native change.
+      - name: Configuration Firebase
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::warning::Secret GOOGLE_SERVICES_JSON absent : APK sans notifications push."
+            exit 0
+          fi
+          if echo "$GOOGLE_SERVICES_JSON" | jq -e . > /dev/null 2>&1; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          else
+            echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
+          fi
+          jq -e '.project_info.project_id and (.client | length > 0)' android/app/google-services.json > /dev/null \
+            || { echo "::error::GOOGLE_SERVICES_JSON n'est pas un fichier google-services.json valide"; exit 1; }
+          echo "Projet Firebase : $(jq -r .project_info.project_id android/app/google-services.json)"
 
       - run: flutter analyze --no-fatal-infos --no-fatal-warnings
       # Le démarrage ne doit jamais rester bloqué (test/demarrage_test.dart).

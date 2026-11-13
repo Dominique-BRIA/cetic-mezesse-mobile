@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'doublons.dart';
 import 'etat.dart';
 import 'format.dart';
 import 'theme.dart';
@@ -397,6 +398,9 @@ Future<bool> agir(BuildContext context, Future<void> Function() action, {String?
     await action();
     if (context.mounted && succes != null) message(context, succes);
     return true;
+  } on Abandon {
+    // L'utilisateur a renoncé après un avertissement de doublon : rien à signaler.
+    return false;
   } catch (e) {
     if (context.mounted) message(context, e is ErreurApi ? e.message : '$e', erreur: true);
     return false;

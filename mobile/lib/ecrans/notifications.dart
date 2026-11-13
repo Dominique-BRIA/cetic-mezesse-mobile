@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../push.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -37,10 +38,13 @@ class _ClocheNotificationsState extends State<ClocheNotifications> {
     super.initState();
     _charger();
     _minuterie = Timer.periodic(const Duration(minutes: 1), (_) => _charger());
+    // Notification push reçue application ouverte : la cloche se met à jour sans attendre la minute.
+    Push.recues.addListener(_charger);
   }
 
   @override
   void dispose() {
+    Push.recues.removeListener(_charger);
     _minuterie?.cancel();
     _feuille.dispose();
     super.dispose();

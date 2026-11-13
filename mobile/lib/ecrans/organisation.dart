@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../doublons.dart';
 import '../etat.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'carriere.dart';
+import 'verification.dart';
 
 Future<List<Map<String, dynamic>>> _profs() async =>
     (await Api.i.get('/utilisateurs?role=PROFESSEUR') as List).cast<Map<String, dynamic>>().where((p) => p['actif'] == true).toList();
@@ -55,6 +57,7 @@ class _EcranClassesState extends State<EcranClasses> {
 
   // Le nom découle du niveau, de la spécialité et de la lettre (RG-29) : on n'en montre que l'aperçu.
   Future<void> _formulaire(Map? classe, List<Map<String, dynamic>> classes) async {
+    final cle = nouvelleCleEnvoi();
     final profs = await _profs();
     final specialites = await _specialites();
     if (!mounted) return;
@@ -100,7 +103,8 @@ class _EcranClassesState extends State<EcranClasses> {
       ]),
       () async {
         final corps = {'niveau': niveau, 'specialiteId': specialiteId.isEmpty ? null : specialiteId, 'profPrincipalId': pp};
-        classe == null ? await Api.i.post('/classes', corps) : await Api.i.put('/classes/${classe['id']}', corps);
+        // L'aperçu montre déjà les classes renommées : pas de seconde question, seulement l'envoi unique.
+        await Api.i.envoyer(classe == null ? 'POST' : 'PUT', classe == null ? '/classes' : '/classes/${classe['id']}', corps: corps, entetes: {'X-Envoi': cle});
       },
     );
     if (ok) setState(() => _version++);
@@ -353,6 +357,7 @@ class _EcranMatieresState extends State<EcranMatieres> {
   int _version = 0;
 
   Future<void> _formulaire(Map? m, String classeId, int suivant) async {
+    final cle = nouvelleCleEnvoi();
     final groupes = (await Api.i.get('/groupes') as List).cast<Map>().where((g) => (g['classes'] as List).any((c) => c['id'] == classeId)).toList();
     final profs = await _profs();
     if (!mounted) return;
@@ -400,7 +405,8 @@ class _EcranMatieresState extends State<EcranMatieres> {
           'ordre': int.tryParse(ordre.text) ?? 1,
           'professeurId': prof,
         };
-        m == null ? await Api.i.post('/matieres', corps) : await Api.i.put('/matieres/${m['id']}', corps);
+        await envoyerVerifie(context, (e) => Api.i.envoyer(m == null ? 'POST' : 'PUT', m == null ? '/matieres' : '/matieres/${m['id']}', corps: corps, entetes: e),
+            cle: cle);
       },
     );
     if (ok) setState(() => _version++);
@@ -515,6 +521,7 @@ class _EcranEnseignantsState extends State<EcranEnseignants> {
   int _version = 0;
 
   Future<void> _formulaire(Map? p) async {
+    final cle = nouvelleCleEnvoi();
     final t = {
       for (final k in ['nom', 'prenom', 'telephone', 'email', 'discipline']) k: TextEditingController(text: p?[k] as String? ?? ''),
     };
@@ -549,7 +556,9 @@ class _EcranEnseignantsState extends State<EcranEnseignants> {
           'actif': actif,
           'carriere': carriere.corps(),
         };
-        p == null ? await Api.i.post('/utilisateurs', corps) : await Api.i.put('/utilisateurs/${p['id']}', corps);
+        await envoyerVerifie(
+            context, (e) => Api.i.envoyer(p == null ? 'POST' : 'PUT', p == null ? '/utilisateurs' : '/utilisateurs/${p['id']}', corps: corps, entetes: e),
+            cle: cle);
       },
     );
     if (ok) setState(() => _version++);
@@ -569,14 +578,18 @@ class _EcranEnseignantsState extends State<EcranEnseignants> {
           for (final p in profs.cast<Map>())
             Carte(
               titre: '${p['nom']} ${p['prenom']}',
-              action: Etat.i.estSG
+              action: Etat.i.estSG && p['fusionneDansId'] == null
                   ? PopupMenuButton<String>(
                       onSelected: (a) async {
                         if (a == 'modifier') return _formulaire(p);
+                        if (a == 'fusionner') {
+                          if (await fusionnerEnseignant(context, p, profs.cast<Map>())) setState(() => _version++);
+                          return;
+                        }
                         if (await confirmer(context, 'Réinitialiser le mot de passe ?', 'Il deviendra « password ».')) {
                           if (context.mounted) {
                             await agir(context, () async {
-                              final r = await Api.i.post('/utilisateurs/${p['id']}/reinitialiser');
+                              final r = await envoyerVerifie(context, (e) => Api.i.envoyer('POST', '/utilisateurs/${p['id']}/reinitialiser', corps: {}, entetes: e));
                               if (context.mounted) message(context, r['message'] as String);
                             });
                           }
@@ -585,6 +598,7 @@ class _EcranEnseignantsState extends State<EcranEnseignants> {
                       itemBuilder: (_) => const [
                         PopupMenuItem(value: 'modifier', child: Text('Modifier')),
                         PopupMenuItem(value: 'reinitialiser', child: Text('Réinitialiser le mot de passe')),
+                        PopupMenuItem(value: 'fusionner', child: Text('Fusionner avec un autre compte…')),
                       ],
                     )
                   : null,
@@ -597,7 +611,7 @@ class _EcranEnseignantsState extends State<EcranEnseignants> {
                 if ((p['matieres'] as List).isEmpty) Text('Aucune matière', style: TextStyle(color: context.c.encre3)),
                 const SizedBox(height: 6),
                 p['actif'] != true
-                    ? const EtatTexte('Désactivé')
+                    ? EtatTexte(p['fusionneDansId'] != null ? 'Fusionné' : 'Désactivé')
                     : p['doitChangerMotDePasse'] == true
                         ? const EtatTexte('Mot de passe provisoire', ton: 'alerte')
                         : const EtatTexte('Actif', ton: 'succes'),

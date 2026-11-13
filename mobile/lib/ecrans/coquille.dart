@@ -7,6 +7,8 @@ import '../file_attente.dart';
 import '../format.dart';
 import '../mise_a_jour.dart';
 import '../motif.dart';
+import '../push.dart';
+import '../signalement.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'accueil.dart';
@@ -15,6 +17,7 @@ import 'attestations.dart';
 import 'cartes.dart';
 import 'connexion.dart';
 import 'decisions.dart';
+import 'verification.dart';
 import 'notifications.dart';
 import 'eleves.dart';
 import 'evaluations.dart';
@@ -54,6 +57,7 @@ final destinations = <Destination>[
   Destination('statistiques', 'Statistiques', Icons.bar_chart, [_p, _sg], () => const EcranStatistiques(), section: 'Évaluations'),
   Destination('classement', 'Classement général', Icons.emoji_events_outlined, [_p, _sg], () => const EcranClassement(), section: 'Évaluations'),
   Destination('tableau-honneur', "Tableau d'honneur", Icons.military_tech_outlined, [_p, _sg], () => const EcranTableauHonneur(), section: 'Évaluations'),
+  Destination('a-verifier', 'À vérifier', Icons.fact_check_outlined, [_p, _sg], () => const EcranAVerifier(), section: 'Administration'),
   Destination('decisions', 'Décisions prises', Icons.gavel, [_p], () => const EcranDecisions(), section: 'Administration'),
   Destination('attestations', 'Attestations de présence', Icons.approval_outlined, [_p], () => const EcranAttestations(), section: 'Administration'),
   Destination('annees', 'Années et séquences', Icons.date_range_outlined, [_p, _sg], () => const EcranAnnees(), section: 'Administration'),
@@ -86,11 +90,22 @@ class Coquille extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([destinationCourante, versionEcran]),
+      listenable: Listenable.merge([destinationCourante, versionEcran, Push.lienDemande]),
       builder: (context, _) {
         final cle = destinationCourante.value;
         final e = Etat.i;
         final visibles = destinations.where((d) => d.roles.contains(e.role)).toList();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!context.mounted) return;
+          // Notification touchée : son écran s'ouvre ; puis, une fois, la demande d'autorisation.
+          final lien = Push.lienDemande.value;
+          if (lien != null) {
+            Push.lienDemande.value = null;
+            final demandee = lien.split('?').first.replaceAll('/', '');
+            if (visibles.any((x) => x.cle == demandee)) destinationCourante.value = demandee;
+          }
+          Push.proposerAutorisation(context);
+        });
         final d = visibles.firstWhere((x) => x.cle == cle, orElse: () => visibles.first);
         return PopScope(
           canPop: false,
@@ -306,6 +321,8 @@ class _Tiroir extends StatelessWidget {
                   return;
                 }
                 destinationCourante.value = 'accueil';
+                // Avant de perdre la session : le téléphone ne recevra plus les notifications de ce compte.
+                await Signalement.detacher();
                 await e.deconnecter();
               },
             ),

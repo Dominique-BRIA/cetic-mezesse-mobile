@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../api.dart';
+import '../doublons.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -63,6 +64,7 @@ class EcranAjoutEleves extends StatefulWidget {
 }
 
 class _EcranAjoutElevesState extends State<EcranAjoutEleves> {
+  final _cle = nouvelleCleEnvoi();
   late String? _classe = widget.classeParDefaut ?? (widget.classes.isEmpty ? null : widget.classes.first['id'] as String);
   final List<_Fiche> _fiches = [_Fiche()];
   bool _verifier = false;
@@ -84,16 +86,18 @@ class _EcranAjoutElevesState extends State<EcranAjoutEleves> {
     }
     setState(() => _envoi = true);
     try {
-      final r = await Api.i.envoyerFormulaire('/eleves/lot', champs: {
+      final r = await envoyerVerifie(context, (e) => Api.i.envoyerFormulaire('/eleves/lot', entetes: e, champs: {
         'donnees': jsonEncode({'classeId': _classe, 'eleves': [for (final f in remplies) f.versJson()]}),
       }, fichiers: {
         for (final (i, f) in remplies.indexed)
           if (f.photo != null) 'photo_$i': f.photo!,
-      }) as Map;
+      }), cle: _cle) as Map;
       if (mounted) {
         message(context, r['message'] as String);
         Navigator.pop(context, true);
       }
+    } on Abandon {
+      // renoncé après l'avertissement de doublon
     } on ErreurApi catch (e) {
       setState(() => _erreur = e.message);
     } finally {

@@ -14,10 +14,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'journal.dart';
 
 class ErreurApi implements Exception {
-  ErreurApi(this.statut, this.message, {this.horsLigne = false});
+  ErreurApi(this.statut, this.message, {this.horsLigne = false, this.details});
   final int statut;
   final String message;
   final bool horsLigne;
+
+  /// Corps JSON de la réponse (par exemple les fiches semblables d'un avertissement de doublon).
+  final Object? details;
   @override
   String toString() => message;
 }
@@ -116,11 +119,13 @@ class Api {
     if (neuf != null && jeton != null && r.statusCode != 401) await _renouvelerJeton(neuf);
     if (r.statusCode >= 400) {
       var message = 'Erreur ${r.statusCode}';
+      Object? details;
       try {
         final j = jsonDecode(utf8.decode(r.bodyBytes));
+        details = j;
         if (j is Map && j['message'] is String) message = j['message'] as String;
       } catch (_) {}
-      throw ErreurApi(r.statusCode, message);
+      throw ErreurApi(r.statusCode, message, details: details);
     }
     return r;
   }
@@ -167,9 +172,11 @@ class Api {
     }
   }
 
-  Future<dynamic> envoyer(String methode, String chemin, {Object? corps, bool annee = true}) async {
+  Future<dynamic> envoyer(String methode, String chemin, {Object? corps, bool annee = true, Map<String, String> entetes = const {}}) async {
     final uri = _uri(chemin, annee: annee);
-    final req = http.Request(methode, uri)..headers.addAll(_entetes(json: corps != null));
+    final req = http.Request(methode, uri)
+      ..headers.addAll(_entetes(json: corps != null))
+      ..headers.addAll(entetes);
     if (corps != null) req.body = jsonEncode(corps);
     final r = await _executer(() async => http.Response.fromStream(await req.send()), quoi: '${req.method} ${req.url.path}');
     if (r.statusCode == 204 || r.bodyBytes.isEmpty) return null;
@@ -192,9 +199,10 @@ class Api {
     }
   }
 
-  Future<dynamic> televerser(String chemin, String champ, File fichier, {Map<String, String> champs = const {}}) async {
+  Future<dynamic> televerser(String chemin, String champ, File fichier, {Map<String, String> champs = const {}, Map<String, String> entetes = const {}}) async {
     final req = http.MultipartRequest('POST', _uri(chemin))
       ..headers.addAll(_entetes())
+      ..headers.addAll(entetes)
       ..fields.addAll(champs)
       ..files.add(await http.MultipartFile.fromPath(champ, fichier.path, contentType: typeImage(fichier.path)));
     final r = await _executer(() async => http.Response.fromStream(await req.send()), quoi: '${req.method} ${req.url.path}');
@@ -202,9 +210,11 @@ class Api {
   }
 
   /// Formulaire avec plusieurs fichiers (photos d'une saisie groupée) : champs texte + fichiers par nom de champ.
-  Future<dynamic> envoyerFormulaire(String chemin, {Map<String, String> champs = const {}, Map<String, File> fichiers = const {}, bool annee = true}) async {
+  Future<dynamic> envoyerFormulaire(String chemin,
+      {Map<String, String> champs = const {}, Map<String, File> fichiers = const {}, bool annee = true, Map<String, String> entetes = const {}}) async {
     final req = http.MultipartRequest('POST', _uri(chemin, annee: annee))
       ..headers.addAll(_entetes())
+      ..headers.addAll(entetes)
       ..fields.addAll(champs);
     for (final f in fichiers.entries) {
       req.files.add(await http.MultipartFile.fromPath(f.key, f.value.path, contentType: typeImage(f.value.path)));
