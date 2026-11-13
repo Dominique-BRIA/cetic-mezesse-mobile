@@ -26,8 +26,12 @@ class ErreurApi implements Exception {
 }
 
 /// Type d'une photo d'après son extension (le serveur n'accepte que JPEG et PNG).
-MediaType typeImage(String chemin) =>
-    chemin.toLowerCase().endsWith('.png') ? MediaType('image', 'png') : MediaType('image', 'jpeg');
+/// Type d'un fichier envoyé : photos (JPEG, PNG) et pièces justificatives (aussi en PDF).
+MediaType typeImage(String chemin) {
+  final c = chemin.toLowerCase();
+  if (c.endsWith('.pdf')) return MediaType('application', 'pdf');
+  return c.endsWith('.png') ? MediaType('image', 'png') : MediaType('image', 'jpeg');
+}
 
 /// Code du commit de l'APK, fourni par le workflow GitHub (« locale » pour une construction à la main).
 const versionApp = String.fromEnvironment('VERSION', defaultValue: 'locale');

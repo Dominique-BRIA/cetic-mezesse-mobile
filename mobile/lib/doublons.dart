@@ -43,6 +43,7 @@ const _conseils = {
   'matiere': "S'il s'agit de la même matière, modifiez celle qui existe.",
   'classe': 'Une classe de plus au même niveau et dans la même spécialité renommera les classes en A, B…',
   'ligne': 'Deux lignes de cet envoi se ressemblent.',
+  'creneau': "Une classe ne suit qu'un cours à la fois et un enseignant ne peut pas être dans deux classes en même temps. Enregistrez quand même si c'est voulu (classe partagée en groupes, cours commun).",
 };
 
 String? _depuis(Object? iso) {
@@ -80,8 +81,9 @@ class _Question extends StatelessWidget {
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       if (x['ligne'] != null) Text('Ligne ${x['ligne']}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c.encre2)),
                       Text('${x['libelle']}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                      Text(x['force'] == 'FORTE' ? 'Très probablement la même' : 'Nom proche',
-                          style: TextStyle(fontSize: 12, color: x['force'] == 'FORTE' ? c.alerte : c.encre3)),
+                      Text(
+                          switch (x['force']) { 'HORAIRE' => 'Même heure', 'FORTE' => 'Très probablement la même', _ => 'Nom proche' },
+                          style: TextStyle(fontSize: 12, color: x['force'] == 'FAIBLE' ? c.encre3 : c.alerte)),
                       if (x['detail'] != null || _depuis(x['creeLe']) != null)
                         Text([x['detail'], _depuis(x['creeLe'])].whereType<String>().join(' · '), style: TextStyle(fontSize: 12.5, color: c.encre2)),
                     ]),

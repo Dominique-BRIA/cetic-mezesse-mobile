@@ -27,7 +27,8 @@ class Couleurs extends ThemeExtension<Couleurs> {
     surface2: Color(0xFFF4F8FC),
     bord: Color(0xFFD6E1EC),
     encre2: Color(0xFF4E5D70),
-    encre3: Color(0xFF7A899B),
+    // Texte discret : 4,5:1 au moins sur les surfaces (WCAG 1.4.3).
+    encre3: Color(0xFF5E6D7F),
     primairePale: Color(0xFFE4EFFA),
     succes: Color(0xFF1E764C),
     danger: Color(0xFFB3261E),
@@ -43,7 +44,7 @@ class Couleurs extends ThemeExtension<Couleurs> {
     surface2: Color(0xFF19293C),
     bord: Color(0xFF273A51),
     encre2: Color(0xFFA0B1C4),
-    encre3: Color(0xFF74869C),
+    encre3: Color(0xFF7E90A6),
     primairePale: Color(0xFF1C324C),
     succes: Color(0xFF5CC48C),
     danger: Color(0xFFF0786E),
@@ -84,7 +85,9 @@ ThemeData construireTheme(Brightness b) {
     outline: c.bord,
     outlineVariant: c.bord,
   );
-  final bordure = OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: c.bord));
+  // Bord des champs : 3:1 au moins sur la surface (WCAG 1.4.11) ; c.bord reste pour les séparations.
+  final bordure = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: sombre ? const Color(0xFF60738A) : const Color(0xFF86919C)));
   // Police du reste de l'application (Roboto sur Android) : le titre de la barre et le texte des boutons
   // remplacent le style par défaut en entier, ils doivent la reprendre eux-mêmes.
   final police = Typography.material2021(platform: defaultTargetPlatform).black.bodyMedium!.fontFamily;

@@ -12,11 +12,16 @@ import '../signalement.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'accueil.dart';
+import 'absences.dart';
 import 'admin.dart';
+import 'appel.dart';
+import 'bilan_absences.dart';
 import 'attestations.dart';
 import 'cartes.dart';
 import 'connexion.dart';
 import 'decisions.dart';
+import 'emploi_du_temps.dart';
+import 'enseignants_absents.dart';
 import 'verification.dart';
 import 'notifications.dart';
 import 'eleves.dart';
@@ -48,9 +53,15 @@ final destinations = <Destination>[
   Destination('cartes', 'Cartes scolaires', Icons.credit_card, [_p, _sg], () => const EcranCartes(), section: 'Scolarité'),
   Destination('renvoyes', 'Élèves renvoyés', Icons.person_remove_outlined, [_p, _sg], () => const EcranRenvoyes(), section: 'Scolarité'),
   Destination('reinscription', 'Réinscriptions', Icons.person_add_alt, [_sg], () => const EcranReinscription(), section: 'Scolarité'),
+  Destination('appel', "Feuille d'appel", Icons.fact_check_outlined, [_p, _sg], () => const EcranAppel(), section: 'Absences'),
+  Destination('absences', 'Absences', Icons.person_off_outlined, [_p, _sg], () => const EcranAbsences(), section: 'Absences'),
+  Destination('justifications', 'Justifications', Icons.verified_user_outlined, [_p, _sg], () => const EcranJustifications(), section: 'Absences'),
+  Destination('bilan-absences', 'Bilan des absences', Icons.functions, [_p, _sg], () => const EcranBilanAbsences(), section: 'Absences'),
+  Destination('enseignants-absents', 'Enseignants absents', Icons.person_remove_outlined, [_p, _sg], () => const EcranEnseignantsAbsents(), section: 'Absences'),
   Destination('classes', 'Classes', Icons.school_outlined, [_p, _sg], () => const EcranClasses(), section: 'Organisation'),
   Destination('groupes', 'Groupes de matières', Icons.layers_outlined, [_p, _sg], () => const EcranGroupes(), section: 'Organisation'),
   Destination('matieres', 'Matières', Icons.menu_book_outlined, [_p, _sg], () => const EcranMatieres(), section: 'Organisation'),
+  Destination('emploi-du-temps', 'Emploi du temps', Icons.calendar_view_week_outlined, [_p, _sg], () => const EcranEmploiDuTemps(), section: 'Organisation'),
   Destination('enseignants', 'Enseignants', Icons.badge_outlined, [_p, _sg], () => const EcranEnseignants(), section: 'Organisation'),
   Destination('notes', 'Notes', Icons.grid_on, [_p, _sg], () => const EcranNotes(), section: 'Évaluations'),
   Destination('bulletins', 'Bulletins', Icons.description_outlined, [_p, _sg], () => const EcranBulletins(), section: 'Évaluations'),
