@@ -46,6 +46,59 @@ Widget _espace(Widget w) => Padding(padding: const EdgeInsets.only(bottom: 12), 
 
 // ---------------- Classes ----------------
 
+/// Les classes groupées par niveau (1re année d'abord), par ordre de nom à l'intérieur d'un niveau.
+List<(int, List<Map<String, dynamic>>)> _parNiveau(List<Map<String, dynamic>> classes) {
+  final triees = [...classes]..sort((x, y) {
+      final n = (x['niveau'] as int).compareTo(y['niveau'] as int);
+      return n != 0 ? n : (x['nom'] as String).compareTo(y['nom'] as String);
+    });
+  final groupes = <int, List<Map<String, dynamic>>>{};
+  for (final c in triees) {
+    groupes.putIfAbsent(c['niveau'] as int, () => []).add(c);
+  }
+  return [for (final e in groupes.entries) (e.key, e.value)];
+}
+
+/// Un niveau : bandeau de couleur (titre, nombre de classes et d'élèves), puis ses classes sur un fond pâle.
+class _BlocNiveau extends StatelessWidget {
+  const _BlocNiveau({required this.niveau, required this.classes, required this.enfants});
+  final int niveau;
+  final List<Map<String, dynamic>> classes;
+  final List<Widget> enfants;
+
+  @override
+  Widget build(BuildContext context) {
+    final primaire = Theme.of(context).colorScheme.primary;
+    final sur = Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0C1826) : Colors.white;
+    final eleves = classes.fold<int>(0, (n, c) => n + (c['_count']['inscriptions'] as int));
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: context.c.primairePale.withValues(alpha: 0.6),
+        border: Border.all(color: primaire.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Container(
+          color: primaire,
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+          child: Wrap(crossAxisAlignment: WrapCrossAlignment.end, spacing: 10, children: [
+            Text('${niveau == 1 ? '1re' : '${niveau}e'} année', style: TextStyle(color: sur, fontWeight: FontWeight.w700, fontSize: 17)),
+            Text('${classes.length} classe${classes.length > 1 ? 's' : ''} · $eleves élève${eleves > 1 ? 's' : ''}',
+                style: TextStyle(color: sur.withValues(alpha: 0.9), fontSize: 13)),
+          ]),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            for (final (i, e) in enfants.indexed) Padding(padding: EdgeInsets.only(top: i == 0 ? 0 : 10), child: e),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
 class EcranClasses extends StatefulWidget {
   const EcranClasses({super.key});
   @override
@@ -135,49 +188,53 @@ class _EcranClassesState extends State<EcranClasses> {
               ),
             ),
           if (classes.isEmpty) const Carte(enfant: Vide('Aucune classe', texte: 'Créez les spécialités, puis les classes et leurs groupes de matières.')),
-          for (final c in classes)
-            Carte(
-              titre: c['nom'] as String,
-              action: Etat.i.estSG
-                  ? Row(mainAxisSize: MainAxisSize.min, children: [
-                      IconButton(icon: const Icon(Icons.edit_outlined, size: 20), onPressed: () => _formulaire(c, classes)),
-                      // Une classe sans élève peut être supprimée ; les lettres des autres se resserrent.
-                      if (c['_count']['inscriptions'] == 0)
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 20),
-                          onPressed: () async {
-                            if (!await confirmer(context, 'Supprimer cette classe ?', '${c['nom']} et ses matières seront supprimées.',
-                                action: 'Supprimer', danger: true)) {
-                              return;
-                            }
-                            if (context.mounted &&
-                                await agir(context, () => Api.i.delete('/classes/${c['id']}'), succes: 'Classe supprimée.')) {
-                              setState(() => _version++);
-                            }
-                          },
-                        ),
-                    ])
-                  : null,
-              enfant: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                LigneInfo('Spécialité', c['specialite']?['nom'] as String? ?? '—'),
-                LigneInfo('Élèves', '${c['_count']['inscriptions']}', gras: true),
-                LigneInfo('Matières', '${c['_count']['matieres']}'),
-                LigneInfo('Prof. principal', c['profPrincipal'] == null ? '—' : '${c['profPrincipal']['prenom']} ${c['profPrincipal']['nom']}'),
-                const SizedBox(height: 8),
-                Wrap(spacing: 8, children: [
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-                    label: const Text('Liste PDF'),
-                    onPressed: () => agir(context, () => Api.i.ouvrirDocument('/documents/liste?classeId=${c['id']}&format=pdf')),
-                  ),
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.table_chart_outlined, size: 18),
-                    label: const Text('Excel'),
-                    onPressed: () => agir(context, () => Api.i.ouvrirDocument('/documents/liste?classeId=${c['id']}&format=xlsx')),
-                  ),
+          // Rangées par niveau : un titre par niveau, puis ses classes.
+          for (final (niveau, groupe) in _parNiveau(classes))
+            _BlocNiveau(niveau: niveau, classes: groupe, enfants: [
+            for (final c in groupe)
+              Carte(
+                titre: c['nom'] as String,
+                action: Etat.i.estSG
+                    ? Row(mainAxisSize: MainAxisSize.min, children: [
+                        IconButton(icon: const Icon(Icons.edit_outlined, size: 20), onPressed: () => _formulaire(c, classes)),
+                        // Une classe sans élève peut être supprimée ; les lettres des autres se resserrent.
+                        if (c['_count']['inscriptions'] == 0)
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, size: 20),
+                            onPressed: () async {
+                              if (!await confirmer(context, 'Supprimer cette classe ?', '${c['nom']} et ses matières seront supprimées.',
+                                  action: 'Supprimer', danger: true)) {
+                                return;
+                              }
+                              if (context.mounted &&
+                                  await agir(context, () => Api.i.delete('/classes/${c['id']}'), succes: 'Classe supprimée.')) {
+                                setState(() => _version++);
+                              }
+                            },
+                          ),
+                      ])
+                    : null,
+                enfant: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  LigneInfo('Spécialité', c['specialite']?['nom'] as String? ?? '—'),
+                  LigneInfo('Élèves', '${c['_count']['inscriptions']}', gras: true),
+                  LigneInfo('Matières', '${c['_count']['matieres']}'),
+                  LigneInfo('Prof. principal', c['profPrincipal'] == null ? '—' : '${c['profPrincipal']['prenom']} ${c['profPrincipal']['nom']}'),
+                  const SizedBox(height: 8),
+                  Wrap(spacing: 8, children: [
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                      label: const Text('Liste PDF'),
+                      onPressed: () => agir(context, () => Api.i.ouvrirDocument('/documents/liste?classeId=${c['id']}&format=pdf')),
+                    ),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.table_chart_outlined, size: 18),
+                      label: const Text('Excel'),
+                      onPressed: () => agir(context, () => Api.i.ouvrirDocument('/documents/liste?classeId=${c['id']}&format=xlsx')),
+                    ),
+                  ]),
                 ]),
-              ]),
-            ),
+              ),
+            ]),
         ]),
       ),
     );
