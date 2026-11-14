@@ -442,7 +442,7 @@ class _EcranFusionState extends State<EcranFusion> {
                   ]),
                 ),
               Text(
-                "La fiche absorbée n'est pas effacée. Si la fusion était une erreur, le Proviseur peut la défaire en désapprouvant la décision.",
+                "La fiche absorbée n'est pas effacée. Si la fusion était une erreur, le Directeur peut la défaire en désapprouvant la décision.",
                 style: TextStyle(fontSize: 12, color: c.encre3),
               ),
             ],

@@ -24,7 +24,7 @@
       <tr><td style="width:40%"><b>Établissement</b></td><td>Collège d'Enseignement Technique Industriel et Commercial de Mezesse</td></tr>
       <tr><td><b>Adresse de l'application</b></td><td>https://ceticmezesse.vercel.app (web) · application Android</td></tr>
       <tr><td><b>Pour commencer</b></td><td>Guide de première utilisation du Directeur</td></tr>
-      <tr><td><b>Version du document</b></td><td>2.2 · Novembre 2026</td></tr>
+      <tr><td><b>Version du document</b></td><td>2.3 · Novembre 2026</td></tr>
     </table>
   </div>
 </section>
@@ -40,14 +40,16 @@
     <li><span>6. Statistiques, classement et tableau d'honneur</span></li>
     <li><span>7. Les attestations de présence effective au poste</span></li>
     <li><span>8. Les paramètres</span></li>
-    <li><span>9. L'application mobile et questions fréquentes</span></li>
-    <li><span>10. Le schéma des dépendances</span></li>
+    <li><span>9. Les absences et les exclusions</span></li>
+    <li><span>10. L'application mobile et questions fréquentes</span></li>
+    <li><span>11. Le schéma des dépendances</span></li>
   </ol>
   <div class="encadre">
     <b>Votre rôle.</b> Vous consultez tout : élèves, classes, matières, enseignants, notes, statistiques. Vous gardez la main sur plusieurs choses :
     <ul>
       <li>les <b>décisions du Surveillant Général</b>, que vous pouvez désapprouver pendant 4 semaines ;</li>
       <li>le <b>renvoi</b> d'un élève et sa <b>réintégration</b>, que vous seul pouvez faire ;</li>
+      <li>la <b>décision d'exclusion</b> quand un élève atteint les heures d'absence non justifiées fixées : exclusion temporaire, définitive ou sursis ;</li>
       <li>les <b>attestations de présence effective au poste</b> des personnels, que vous seul délivrez ;</li>
       <li>la <b>moyenne minimale du tableau d'honneur</b>, que vous réglez avec le Surveillant Général ;</li>
       <li>l'édition des <b>bulletins</b>, des <b>listes</b>, des <b>cartes scolaires</b> et des <b>certificats du tableau d'honneur</b>, comme le Surveillant Général.</li>
@@ -100,7 +102,7 @@
 
 <section class="chapitre">
   <h2>4. Les élèves : consulter, inscrire, renvoyer, réintégrer</h2>
-  <p>Menu Scolarité → <b>Élèves</b> : la liste des élèves inscrits, par classe, avec une recherche par nom ou matricule, et les listes en PDF ou Excel. Vous pouvez <b>inscrire des élèves</b> (Ajouter des élèves : une ligne par élève, photo facultative, un seul Enregistrer) et <b>ajouter leurs photos</b> (bouton Photos) ; la modification d'une fiche revient au Surveillant Général.</p>
+  <p>Menu Scolarité → <b>Élèves</b> : la liste des élèves inscrits, par classe, avec une recherche par nom ou matricule, et les listes en PDF ou Excel. Vous pouvez <b>inscrire des élèves</b> (Ajouter des élèves : une ligne par élève, photo facultative, un seul Enregistrer) et <b>ajouter leurs photos</b> (bouton Photos) ; la modification d'une fiche revient au Surveillant Général. La colonne <b>N°</b> donne le numéro d'ordre de l'élève dans sa classe (1, 2, 3… dans l'ordre alphabétique) ; la colonne <b>Sanction</b>, sa sanction de l'année pour absences, et le bouton <b>Décider</b> quand il a atteint les heures d'exclusion (chapitre 9). La liste <b>Sanction</b> filtre les élèves ; « Exclusion à décider » montre ceux qui attendent votre décision.</p>
   <figure class="duo"><img src="img/manuel/dir-fiche-eleve.png" alt="Sur le site"><img class="mobile" src="img/mobile/dir-fiche-eleve.png" alt="Sur l'application mobile"><figcaption>Figure 7 — Fiche de l'élève, avec le bouton Renvoyer · site à gauche, application mobile à droite</figcaption></figure>
   <h3>Renvoyer un élève</h3>
   <p>Sur sa fiche, cliquez <b>Renvoyer</b>, puis indiquez la <b>date</b> et le <b>motif</b> (obligatoires).</p>
@@ -151,12 +153,32 @@
 <section class="chapitre">
   <h2>8. Les paramètres</h2>
   <p>Menu Administration → <b>Paramètres</b>. Vous y voyez ce qui s'imprime en tête des documents (noms français et anglais, sigles, région, département, arrondissement, localité, téléphone…) et les barèmes des grades et des cotes. Ces informations sont tenues par le Surveillant Général : pour vous, elles sont en lecture seule.</p>
-  <p>Seule la carte <b>Tableau d'honneur</b> vous est ouverte : la <b>moyenne minimale</b> à atteindre. Saisissez-la (par exemple <code>12</code> ou <code>12,50</code>) puis <b>Enregistrer</b> ; le tableau d'honneur et les bulletins en tiennent compte aussitôt.</p>
+  <p>Les heures des <b>sanctions pour absences non justifiées</b> (avertissement conduite, blâme conduite, exclusion) sont aussi réglées par le Surveillant Général. Seule la carte <b>Tableau d'honneur</b> vous est ouverte : la <b>moyenne minimale</b> à atteindre. Saisissez-la (par exemple <code>12</code> ou <code>12,50</code>) puis <b>Enregistrer</b> ; le tableau d'honneur et les bulletins en tiennent compte aussitôt.</p>
   <figure class="duo"><img src="img/manuel/dir-parametres.png" alt="Sur le site"><img class="mobile" src="img/mobile/dir-parametres.png" alt="Sur l'application mobile"><figcaption>Figure 18 — Paramètres : en lecture seule, sauf le tableau d'honneur · site à gauche, application mobile à droite</figcaption></figure>
 </section>
 
 <section class="chapitre">
-  <h2>9. L'application mobile et questions fréquentes</h2>
+  <h2>9. Les absences et les exclusions</h2>
+  <p>Le Surveillant Général tient les absences : l'emploi du temps de chaque classe, l'appel de chaque jour, les justificatifs. Vous consultez tout, en lecture seule, dans le menu <b>Absences</b> (Feuille d'appel, Absences, Bilan des absences, Enseignants absents) et dans Organisation → <b>Emploi du temps</b>. Le détail est dans le <b>Manuel des absences</b>.</p>
+  <ul>
+    <li><b>Bilan des absences</b> : pour une classe et une période, les heures de chaque élève (justifiées, non justifiées, depuis la rentrée) et la sanction que portera le bulletin.</li>
+    <li><b>Enseignants absents</b> : les séances non assurées et le total d'heures par enseignant, sur une période ; la liste <b>Enseignant</b> n'affiche que celles d'un enseignant. Une séance confiée à un remplaçant n'y figure pas.</li>
+  </ul>
+  <h3>Décider d'une exclusion</h3>
+  <p>Quand un élève atteint les heures de l'<b>Exclusion</b>, vous recevez une fois la notification <b>Heures d'exclusion atteintes</b>, qui mène au bilan de sa classe. L'exclusion n'est jamais automatique : en attendant votre décision, le bulletin porte le blâme conduite. Le bouton rouge <b>Décider</b>, dans le Bilan des absences ou dans la liste des Élèves, propose :</p>
+  <table>
+    <tr><th style="width:24%">Décision</th><th>Conséquence pour l'élève</th><th style="width:26%">Sur le bulletin</th></tr>
+    <tr><td><b>Exclusion temporaire</b></td><td>Renvoyé pendant le nombre de jours ouvrés que vous indiquez, à partir de la date choisie ; il reprend les cours de lui-même.</td><td>Exclusion : nombre de jours</td></tr>
+    <tr><td><b>Exclusion définitive</b></td><td>Radié pour toujours : il figure parmi les Élèves renvoyés et ne peut plus être réinscrit.</td><td>Exclusion : « Définitive »</td></tr>
+    <tr><td><b>Sursis</b></td><td>Reste en classe ; l'exclusion est suspendue, avec un avertissement solennel aux parents.</td><td>Blâme : « Oui (sursis) »</td></tr>
+  </table>
+  <figure class="duo"><img src="img/manuel/dir-bilan-absences.png" alt="Sur le site"><img class="mobile" src="img/mobile/dir-bilan-absences.png" alt="Sur l'application mobile"><figcaption>Figure 19 — Le bilan des absences, avec « Décider » · site à gauche, application mobile à droite</figcaption></figure>
+  <figure><img src="img/manuel/dir-decision-exclusion.png" alt="La décision d'exclusion"><figcaption>Figure 20 — La décision d'exclusion</figcaption></figure>
+  <p>Le Surveillant Général reçoit une notification de votre décision. Elle s'affiche ensuite sous la sanction de l'élève ; en cas d'erreur, <b>Annuler la décision</b> la retire et l'élève n'est plus exclu.</p>
+</section>
+
+<section class="chapitre">
+  <h2>10. L'application mobile et questions fréquentes</h2>
   <p>L'application Android offre les mêmes écrans, dont le journal des décisions, les attestations et le tableau d'honneur. Elle s'ouvre sans attendre le serveur, garde une copie des écrans déjà consultés pour les relire sans réseau, et affiche sa version en bas de l'écran de connexion et du menu (par exemple « Version 1.1.0 (2) »).</p>
 
   <h3>Installer l'application</h3>
@@ -175,7 +197,7 @@
     <li><b>Téléchargement interrompu</b> (réseau trop faible) : l'application réessaie d'elle-même ; le bouton <b>Réessayer</b> du bandeau relance tout de suite.</li>
   </ul>
   <div class="encadre attention">Inutile de désinstaller l'application : chaque mise à jour s'installe par-dessus. Une nouvelle version complète pèse une soixantaine de Mo et se télécharge même sur les données mobiles : elles sont rares, la plupart des mises à jour étant des correctifs légers.</div>
-  <figure class="trio"><img src="img/mobile/maj-telechargement.png" alt="Téléchargement en cours"><img src="img/mobile/maj-bandeau.png" alt="Version prête"><img src="img/mobile/maj-obligatoire.png" alt="Écran Mise à jour nécessaire"><figcaption>Figure 19 — Le téléchargement, la version prête à s'installer et l'écran « Mise à jour nécessaire »</figcaption></figure>
+  <figure class="trio"><img src="img/mobile/maj-telechargement.png" alt="Téléchargement en cours"><img src="img/mobile/maj-bandeau.png" alt="Version prête"><img src="img/mobile/maj-obligatoire.png" alt="Écran Mise à jour nécessaire"><figcaption>Figure 21 — Le téléchargement, la version prête à s'installer et l'écran « Mise à jour nécessaire »</figcaption></figure>
   <div class="encadre">Les mises à jour automatiques existent depuis la version 1.1.0 ; sur la 1.1.0, le bandeau demande encore de toucher <b>Mettre à jour</b> une fois, les suivantes s'installent seules. Si le menu n'affiche qu'un code de 7 caractères à la place du numéro de version, installez une fois la dernière version avec le lien ci-dessus, par-dessus l'ancienne : rien n'est perdu.</div>
 
   <h3>Questions fréquentes</h3>
@@ -188,6 +210,7 @@
     <tr><td>Ma désapprobation est refusée.</td><td>L'action ne peut plus être défaite ; le message en donne la raison (élèves inscrits, notes saisies…).</td></tr>
     <tr><td>Un élève renvoyé apparaît encore sur un bulletin déjà imprimé.</td><td>Les bulletins générés après le renvoi ne le comprennent plus ; régénérez le PDF.</td></tr>
     <tr><td>Une page est vide.</td><td>L'année n'est pas encore organisée par le Surveillant Général, ou les notes ne sont pas saisies.</td></tr>
+    <tr><td>Un élève a les heures d'exclusion mais le bulletin porte un blâme.</td><td>Vous n'avez pas encore décidé : l'exclusion n'est jamais automatique (chapitre 9).</td></tr>
     <tr><td>La page ne montre pas les dernières données.</td><td>Cliquez <b>Actualiser</b> en haut à droite de la page.</td></tr>
     <tr><td>Aucune mise à jour n'arrive.</td><td>L'application est à jour, ou le téléphone n'a pas de réseau. Touchez <b>Rechercher une mise à jour</b> en bas du menu.</td></tr>
     <tr><td>Android refuse d'installer la mise à jour.</td><td>Autorisez CETIC Mezesse à installer des applications (Paramètres du téléphone → Applications → CETIC Mezesse → Installer des applications inconnues), puis touchez à nouveau <b>Mettre à jour</b>.</td></tr>
@@ -195,13 +218,13 @@
 </section>
 
 <section class="chapitre">
-  <h2>10. Le schéma des dépendances</h2>
+  <h2>11. Le schéma des dépendances</h2>
   <p>La plupart des écrans affichent ce que le Surveillant Général et les professeurs ont saisi : tant que l'année n'est pas organisée, ils restent vides. Vos propres actions, désapprouver une décision, renvoyer ou réintégrer un élève, délivrer une attestation, régler le tableau d'honneur, supposent elles aussi que certaines choses existent déjà.</p>
   <p>Le schéma de la page suivante montre ce qui doit exister avant chaque action. Une flèche signifie « doit exister avant ». Les cases en pointillés sont faites par d'autres que vous.</p>
 </section>
 
 <section class="chapitre paysage">
-  <figure class="diagramme"><img src="img/guide-directeur.svg" style="max-height:150mm;border:none" alt="Dépendances entre les actions du Directeur"><figcaption>Figure 20 — Ce qui doit exister avant chaque action</figcaption></figure>
+  <figure class="diagramme"><img src="img/guide-directeur.svg" style="max-height:150mm;border:none" alt="Dépendances entre les actions du Directeur"><figcaption>Figure 22 — Ce qui doit exister avant chaque action</figcaption></figure>
 </section>
 
 </body>

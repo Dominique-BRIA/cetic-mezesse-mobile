@@ -253,7 +253,8 @@ class _FeuilleState extends State<_Feuille> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 6, 10, 6),
       child: Row(children: [
-        SizedBox(width: 26, child: Text('${i + 1}', style: TextStyle(color: c.encre3, fontSize: 12.5))),
+        // Numéro d'ordre dans la classe (le même sur tous les écrans).
+        SizedBox(width: 26, child: Text('${e['numero'] ?? i + 1}', style: TextStyle(color: c.encre2, fontSize: 12.5, fontWeight: FontWeight.w600))),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('${e['nom']} ${e['prenoms']}', style: const TextStyle(fontWeight: FontWeight.w500)),

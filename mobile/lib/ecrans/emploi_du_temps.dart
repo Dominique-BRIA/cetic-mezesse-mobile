@@ -7,10 +7,12 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'organisation.dart';
 
-// Emploi du temps d'une classe : la semaine type, jour par jour. Le SG le tient, le Proviseur le consulte.
+// Emploi du temps d'une classe : la semaine type en tableau (horaires en lignes, jours en colonnes, défilement
+// sur le côté). Le SG le tient, le Directeur le consulte. Toucher un horaire le change pour toute la ligne.
 // Une nouvelle version, à partir d'une date, remplace la précédente pour les jours suivants.
 
-const _jours = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+// Cours du lundi au vendredi.
+const _jours = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
 
 /// Durée en minutes : « 55 min », « 1 h », « 3 h 25 ».
 String duree(int minutes) {
@@ -53,7 +55,7 @@ class _EcranEmploiDuTempsState extends State<EcranEmploiDuTemps> {
         _rechargement++;
       });
 
-  Future<void> _formulaireCreneau(String classeId, Map vue, {Map? creneau, int jour = 1}) async {
+  Future<void> _formulaireCreneau(String classeId, Map vue, {Map? creneau, int jour = 1, (String, String)? horaire}) async {
     final cle = nouvelleCleEnvoi();
     final matieres = (await Api.i.get('/matieres?classeId=$classeId') as List).cast<Map>();
     if (!mounted) return;
@@ -61,8 +63,8 @@ class _EcranEmploiDuTempsState extends State<EcranEmploiDuTemps> {
       ..sort((x, y) => _minutes(y['fin'] as String) - _minutes(x['fin'] as String));
     var j = creneau?['jour'] as int? ?? jour;
     var matiereId = creneau?['matiere']['id'] as String? ?? '';
-    var debut = creneau?['debut'] as String? ?? (duJour.isEmpty ? '07:30' : duJour.first['fin'] as String);
-    String? fin = creneau?['fin'] as String?;
+    var debut = creneau?['debut'] as String? ?? horaire?.$1 ?? (duJour.isEmpty ? '07:30' : duJour.first['fin'] as String);
+    String? fin = creneau?['fin'] as String? ?? horaire?.$2;
     Map? resultat;
     final ok = await feuilleFormulaire(
       context,
@@ -97,7 +99,7 @@ class _EcranEmploiDuTempsState extends State<EcranEmploiDuTemps> {
             child: Choix<int>(
               libelle: 'Jour',
               valeur: j,
-              options: [for (var k = 1; k <= 6; k++) (k, _jours[k])],
+              options: [for (var k = 1; k <= 5; k++) (k, _jours[k])],
               changer: (v) => maj(() => j = v ?? j),
             ),
           ),
@@ -157,6 +159,111 @@ class _EcranEmploiDuTempsState extends State<EcranEmploiDuTemps> {
           cle: cle,
         ) as Map;
       },
+    );
+    if (ok && resultat != null) _afficher(resultat!);
+  }
+
+  /// Nouvelle ligne horaire, vide : on remplit ensuite chaque case avec une matière.
+  Future<void> _formulaireLigne(String classeId, Map vue, String? derniere) async {
+    var debut = derniere ?? '07:30';
+    final m = _minutes(debut) + 55;
+    var fin = '${(m ~/ 60 % 24).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
+    Map? resultat;
+    final ok = await feuilleFormulaire(
+      context,
+      'Ajouter une heure',
+      (ctx, maj) {
+        Future<void> choisirHeure(bool estDebut) async {
+          final actuelle = estDebut ? debut : fin;
+          final t = await showTimePicker(
+            context: ctx,
+            initialTime: TimeOfDay(hour: _minutes(actuelle) ~/ 60, minute: _minutes(actuelle) % 60),
+            builder: (c, enfant) => MediaQuery(data: MediaQuery.of(c).copyWith(alwaysUse24HourFormat: true), child: enfant!),
+          );
+          if (t != null) maj(() => estDebut ? debut = _heure(t) : fin = _heure(t));
+        }
+
+        final ecart = _minutes(fin) - _minutes(debut);
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('La ligne apparaît vide dans le tableau ; touchez ensuite chaque case pour y mettre une matière.', style: TextStyle(color: context.c.encre2, fontSize: 13.5)),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(child: OutlinedButton.icon(icon: const Icon(Icons.schedule, size: 18), label: Text('Début : $debut'), onPressed: () => choisirHeure(true))),
+            const SizedBox(width: 8),
+            Expanded(child: OutlinedButton.icon(icon: const Icon(Icons.schedule, size: 18), label: Text('Fin : $fin'), onPressed: () => choisirHeure(false))),
+          ]),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(ecart > 0 ? 'Durée : ${duree(ecart)}' : 'La fin doit être après le début.',
+                style: TextStyle(color: ecart > 0 ? context.c.encre2 : context.c.danger, fontSize: 13)),
+          ),
+        ]);
+      },
+      () async {
+        if (_minutes(fin) <= _minutes(debut)) throw ErreurApi(400, 'La fin doit être après le début.');
+        resultat = await Api.i.post('/emplois-du-temps/plages', {'classeId': classeId, 'versionId': (vue['version'] as Map?)?['id'], 'debut': debut, 'fin': fin}) as Map;
+      },
+      action: 'Ajouter la ligne',
+    );
+    if (ok && resultat != null) _afficher(resultat!);
+  }
+
+  Future<void> _retirerLigne(String id) async {
+    Map? resultat;
+    if (await agir(context, () async => resultat = await Api.i.delete('/emplois-du-temps/plages/$id') as Map, succes: 'Ligne retirée.') && resultat != null) {
+      _afficher(resultat!);
+    }
+  }
+
+  /// Nouvel horaire pour toute une ligne : chaque cours de cet horaire, du lundi au vendredi, le prend.
+  Future<void> _formulaireHoraire(String classeId, Map vue, String ancienDebut, String ancienFin, int nombre) async {
+    final cle = nouvelleCleEnvoi();
+    var debut = ancienDebut;
+    var fin = ancienFin;
+    Map? resultat;
+    final ok = await feuilleFormulaire(
+      context,
+      "Modifier l'horaire",
+      (ctx, maj) {
+        Future<void> choisirHeure(bool estDebut) async {
+          final actuelle = estDebut ? debut : fin;
+          final t = await showTimePicker(
+            context: ctx,
+            initialTime: TimeOfDay(hour: _minutes(actuelle) ~/ 60, minute: _minutes(actuelle) % 60),
+            builder: (c, enfant) => MediaQuery(data: MediaQuery.of(c).copyWith(alwaysUse24HourFormat: true), child: enfant!),
+          );
+          if (t != null) maj(() => estDebut ? debut = _heure(t) : fin = _heure(t));
+        }
+
+        final ecart = _minutes(fin) - _minutes(debut);
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text("L'horaire $ancienDebut – $ancienFin change pour les $nombre cours de cette ligne, du lundi au vendredi.", style: const TextStyle(fontSize: 14)),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(child: OutlinedButton.icon(icon: const Icon(Icons.schedule, size: 18), label: Text('Début : $debut'), onPressed: () => choisirHeure(true))),
+            const SizedBox(width: 8),
+            Expanded(child: OutlinedButton.icon(icon: const Icon(Icons.schedule, size: 18), label: Text('Fin : $fin'), onPressed: () => choisirHeure(false))),
+          ]),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(ecart > 0 ? 'Durée : ${duree(ecart)}' : 'La fin doit être après le début.',
+                style: TextStyle(color: ecart > 0 ? context.c.encre2 : context.c.danger, fontSize: 13)),
+          ),
+        ]);
+      },
+      () async {
+        if (_minutes(fin) <= _minutes(debut)) throw ErreurApi(400, 'La fin doit être après le début.');
+        final corps = {
+          'classeId': classeId,
+          'versionId': (vue['version'] as Map?)?['id'],
+          'ancienDebut': ancienDebut,
+          'ancienFin': ancienFin,
+          'debut': debut,
+          'fin': fin,
+        };
+        resultat = await envoyerVerifie(context, (e) => Api.i.envoyer('PUT', '/emplois-du-temps/horaires', corps: corps, entetes: e), cle: cle) as Map;
+      },
+      action: 'Appliquer à la ligne',
     );
     if (ok && resultat != null) _afficher(resultat!);
   }
@@ -235,7 +342,7 @@ class _EcranEmploiDuTempsState extends State<EcranEmploiDuTemps> {
             final creneaux = (vue['creneaux'] as List).cast<Map>();
             final versions = (vue['versions'] as List).cast<Map>();
             final version = vue['version'] as Map?;
-            final jours = [for (var j = 1; j <= 6; j++) j].where((j) => j < 6 || sg || creneaux.any((x) => x['jour'] == j));
+            final jours = [for (var j = 1; j <= 5; j++) j];
             return Defilement(rafraichir: recharger, enfants: [
               Card(
                 margin: EdgeInsets.zero,
@@ -282,8 +389,7 @@ class _EcranEmploiDuTempsState extends State<EcranEmploiDuTemps> {
                 Text('  ${_libelleVersion(version)} · ${duree(vue['minutesParSemaine'] as int)} de cours par semaine', style: TextStyle(color: c.encre2)),
               if (version == null && !sg)
                 const Carte(enfant: Vide("Pas encore d'emploi du temps", texte: "Le Surveillant Général ne l'a pas encore saisi pour cette classe.")),
-              if (version != null || sg)
-                for (final j in jours) _jour(context, classeId, vue, j, creneaux.where((x) => x['jour'] == j).toList(), sg),
+              if (version != null || sg) _tableau(context, classeId, vue, jours, creneaux, sg),
             ]);
           },
         );
@@ -291,76 +397,156 @@ class _EcranEmploiDuTempsState extends State<EcranEmploiDuTemps> {
     );
   }
 
-  Widget _jour(BuildContext context, String classeId, Map vue, int j, List<Map> liste, bool sg) {
+  /// La semaine en tableau : une ligne par horaire, une colonne par jour ; défilement sur le côté.
+  Widget _tableau(BuildContext context, String classeId, Map vue, List<int> jours, List<Map> creneaux, bool sg) {
     final c = context.c;
     final primaire = Theme.of(context).colorScheme.primary;
     final sur = Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0C1826) : Colors.white;
-    final total = liste.fold<int>(0, (n, x) => n + (x['duree'] as int));
+    final plages = ((vue['plages'] as List?) ?? const []).cast<Map>();
+    final horaires = {
+      for (final x in [...plages, ...creneaux]) '${x['debut']}|${x['fin']}': (x['debut'] as String, x['fin'] as String),
+    }.values.toList()
+      ..sort((a, b) => a.$1 != b.$1 ? a.$1.compareTo(b.$1) : a.$2.compareTo(b.$2));
+    Map? plageDe(String debut, String fin) => plages.where((p) => p['debut'] == debut && p['fin'] == fin).firstOrNull;
+    const largeurHeure = 92.0;
+    const largeurJour = 150.0;
+    Widget cellule(Widget enfant, {double largeur = largeurJour, Color? fond}) => Container(
+          width: largeur,
+          constraints: const BoxConstraints(minHeight: 58),
+          decoration: BoxDecoration(color: fond, border: Border(right: BorderSide(color: c.bord), bottom: BorderSide(color: c.bord))),
+          child: enfant,
+        );
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Container(
-          color: primaire,
-          padding: const EdgeInsets.fromLTRB(14, 9, 14, 9),
-          child: Row(children: [
-            Expanded(child: Text(_jours[j], style: TextStyle(color: sur, fontWeight: FontWeight.w700, fontSize: 16))),
-            if (total > 0) Text(duree(total), style: TextStyle(color: sur.withValues(alpha: 0.9), fontSize: 13)),
-          ]),
-        ),
-        if (liste.isEmpty) Padding(padding: const EdgeInsets.all(14), child: Center(child: Text('Pas de cours', style: TextStyle(color: c.encre3)))),
-        for (final (i, x) in liste.indexed) ...[
-          if (i > 0) Divider(height: 1, color: c.bord),
-          InkWell(
-            onTap: sg ? () => _formulaireCreneau(classeId, vue, creneau: x, jour: j) : null,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Expanded(child: Text('${x['debut']} – ${x['fin']}', style: const TextStyle(fontWeight: FontWeight.w700))),
-                  Text(duree(x['duree'] as int), style: TextStyle(color: c.encre2, fontSize: 12.5)),
-                ]),
-                Text('${x['matiere']['nom']}', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
-                Text(
-                  x['matiere']['professeur'] == null ? 'Aucun enseignant' : '${x['matiere']['professeur']['prenom']} ${x['matiere']['professeur']['nom']}',
-                  style: TextStyle(color: c.encre2, fontSize: 12.5),
-                ),
-                for (final k in (x['conflits'] as List).cast<Map>())
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // En-tête : les jours et leur total d'heures.
+          Row(children: [
+            cellule(Padding(padding: const EdgeInsets.all(10), child: Text('HORAIRE', style: TextStyle(color: c.encre2, fontSize: 11.5, fontWeight: FontWeight.w700))),
+                largeur: largeurHeure, fond: c.surface2),
+            for (final j in jours)
+              Builder(builder: (context) {
+                final total = creneaux.where((x) => x['jour'] == j).fold<int>(0, (n, x) => n + (x['duree'] as int));
+                return cellule(
                   Padding(
-                    padding: const EdgeInsets.only(top: 3),
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Icon(Icons.warning_amber_rounded, size: 15, color: c.danger),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          k['memeClasse'] == true
-                              ? 'Même heure que ${k['matiere']} (${k['debut']} – ${k['fin']})'
-                              : 'Enseignant attendu en ${k['classe']} (${k['matiere']}, ${k['debut']} – ${k['fin']})',
-                          style: TextStyle(color: c.danger, fontSize: 12.5, fontWeight: FontWeight.w600),
+                    padding: const EdgeInsets.all(10),
+                    child: Text.rich(TextSpan(children: [
+                      TextSpan(text: _jours[j], style: TextStyle(color: sur, fontWeight: FontWeight.w700)),
+                      if (total > 0) TextSpan(text: '  ${duree(total)}', style: TextStyle(color: sur.withValues(alpha: 0.9), fontSize: 12)),
+                    ])),
+                  ),
+                  fond: primaire,
+                );
+              }),
+          ]),
+          if (horaires.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(sg ? 'Commencez par les heures (« Ajouter une heure »), puis remplissez chaque case avec une matière.' : 'Aucun cours.',
+                  style: TextStyle(color: c.encre3)),
+            ),
+          for (final (debut, fin) in horaires)
+            IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                cellule(
+                  InkWell(
+                    onTap: sg ? () => _formulaireHoraire(classeId, vue, debut, fin, creneaux.where((x) => x['debut'] == debut && x['fin'] == fin).length) : null,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(debut, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        Text(fin, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        if (sg)
+                          Row(children: [
+                            Icon(Icons.edit, size: 14, color: c.encre3),
+                            // Ligne vide : on peut la retirer.
+                            if (plageDe(debut, fin) != null && !creneaux.any((x) => x['debut'] == debut && x['fin'] == fin))
+                              InkWell(
+                                onTap: () => _retirerLigne(plageDe(debut, fin)!['id'] as String),
+                                child: Padding(padding: const EdgeInsets.only(left: 10), child: Icon(Icons.delete_outline, size: 16, color: c.danger)),
+                              ),
+                          ]),
+                      ]),
+                    ),
+                  ),
+                  largeur: largeurHeure,
+                  fond: c.surface2,
+                ),
+                for (final j in jours)
+                  cellule(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    // Case vide : toucher pour y mettre une matière à cet horaire.
+                    if (sg && !creneaux.any((x) => x['jour'] == j && x['debut'] == debut && x['fin'] == fin))
+                      SizedBox(
+                        height: 56,
+                        child: InkWell(
+                          onTap: () => _formulaireCreneau(classeId, vue, jour: j, horaire: (debut, fin)),
+                          child: Center(child: Icon(Icons.add, color: c.encre3)),
                         ),
                       ),
-                    ]),
-                  ),
+                    for (final x in creneaux.where((x) => x['jour'] == j && x['debut'] == debut && x['fin'] == fin))
+                      InkWell(
+                        onTap: sg ? () => _formulaireCreneau(classeId, vue, creneau: x, jour: j) : null,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text('${x['matiere']['nom']}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
+                            Text(
+                              x['matiere']['professeur'] == null ? 'Aucun enseignant' : '${x['matiere']['professeur']['prenom']} ${x['matiere']['professeur']['nom']}',
+                              style: TextStyle(color: c.encre2, fontSize: 12),
+                            ),
+                            if ((x['conflits'] as List).isNotEmpty)
+                              Row(children: [
+                                Icon(Icons.warning_amber_rounded, size: 14, color: c.danger),
+                                const SizedBox(width: 3),
+                                Expanded(
+                                  child: Text(
+                                    (x['conflits'] as List).first['memeClasse'] == true ? 'Deux cours à la même heure' : 'Enseignant aussi en ${(x['conflits'] as List).first['classe']}',
+                                    style: TextStyle(color: c.danger, fontSize: 11.5, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ]),
+                          ]),
+                        ),
+                      ),
+                  ])),
               ]),
             ),
-          ),
-        ],
-        if (sg)
-          Material(
-            color: primaire.withValues(alpha: 0.10),
-            child: InkWell(
-              onTap: () => _formulaireCreneau(classeId, vue, jour: j),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 11),
-                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.add, size: 18, color: primaire),
-                  const SizedBox(width: 6),
-                  Text('Ajouter', style: TextStyle(color: primaire, fontWeight: FontWeight.w700)),
-                ]),
+          if (sg)
+            Row(children: [
+              cellule(
+                InkWell(
+                  onTap: () => _formulaireLigne(classeId, vue, horaires.isEmpty ? null : horaires.last.$2),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                    child: Column(children: [
+                      Icon(Icons.more_time, size: 18, color: primaire),
+                      Text('Ajouter une heure', textAlign: TextAlign.center, style: TextStyle(color: primaire, fontWeight: FontWeight.w700, fontSize: 12)),
+                    ]),
+                  ),
+                ),
+                largeur: largeurHeure,
+                fond: primaire.withValues(alpha: 0.08),
               ),
-            ),
-          ),
-      ]),
+              for (final j in jours)
+                cellule(
+                  InkWell(
+                    onTap: () => _formulaireCreneau(classeId, vue, jour: j),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        Icon(Icons.add, size: 18, color: primaire),
+                        const SizedBox(width: 4),
+                        Text('Ajouter', style: TextStyle(color: primaire, fontWeight: FontWeight.w700)),
+                      ]),
+                    ),
+                  ),
+                  fond: primaire.withValues(alpha: 0.08),
+                ),
+            ]),
+        ]),
+      ),
     );
   }
 }

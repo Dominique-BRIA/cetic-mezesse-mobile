@@ -123,7 +123,7 @@ class _Releve extends StatelessWidget {
             ExpansionTile(
               shape: const Border(),
               leading: SizedBox(width: 44, child: Text(rang(e['rang'] as Map?), style: TextStyle(color: context.c.encre2))),
-              title: Text('${e['nom']} ${e['prenoms']}', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14.5)),
+              title: Text('${e['numero'] == null ? '' : '${e['numero']}. '}${e['nom']} ${e['prenoms']}', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14.5)),
               trailing: Text(note(e['moyenne'] as num?),
                   style: TextStyle(fontWeight: FontWeight.w700, color: couleurNote(context, e['moyenne'] as num?))),
               childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 10),

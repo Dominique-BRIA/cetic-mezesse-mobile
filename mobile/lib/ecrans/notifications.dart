@@ -145,7 +145,13 @@ class _ClocheNotificationsState extends State<ClocheNotifications> {
                           final lien = n['lien'] as String?;
                           if (lien != null) {
                             Navigator.pop(ctx);
-                            widget.ouvrir(lien.split('?').first.replaceAll('/', ''));
+                            // Pages du site → entrées du menu de l'application.
+                            final chemin = lien.split('?').first;
+                            widget.ouvrir(switch (chemin) {
+                              '/absences/bilan' => 'bilan-absences',
+                              '/absences/enseignants' => 'enseignants-absents',
+                              _ => chemin.replaceAll('/', ''),
+                            });
                           }
                         },
                       );

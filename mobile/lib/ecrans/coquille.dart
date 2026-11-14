@@ -55,7 +55,6 @@ final destinations = <Destination>[
   Destination('reinscription', 'Réinscriptions', Icons.person_add_alt, [_sg], () => const EcranReinscription(), section: 'Scolarité'),
   Destination('appel', "Feuille d'appel", Icons.fact_check_outlined, [_p, _sg], () => const EcranAppel(), section: 'Absences'),
   Destination('absences', 'Absences', Icons.person_off_outlined, [_p, _sg], () => const EcranAbsences(), section: 'Absences'),
-  Destination('justifications', 'Justifications', Icons.verified_user_outlined, [_p, _sg], () => const EcranJustifications(), section: 'Absences'),
   Destination('bilan-absences', 'Bilan des absences', Icons.functions, [_p, _sg], () => const EcranBilanAbsences(), section: 'Absences'),
   Destination('enseignants-absents', 'Enseignants absents', Icons.person_remove_outlined, [_p, _sg], () => const EcranEnseignantsAbsents(), section: 'Absences'),
   Destination('classes', 'Classes', Icons.school_outlined, [_p, _sg], () => const EcranClasses(), section: 'Organisation'),

@@ -39,7 +39,8 @@ class _PastilleEtat extends StatelessWidget {
     final c = context.c;
     final j = justification;
     final couleur = j == null ? c.danger : c.succes;
-    return Container(
+    final pieces = j == null ? 0 : ((j['pieces'] as List?)?.length ?? 0);
+    final pastille = Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
       child: Row(
@@ -56,6 +57,24 @@ class _PastilleEtat extends StatelessWidget {
           ),
         ],
       ),
+    );
+    if (pieces == 0) return pastille;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(child: pastille),
+        const SizedBox(width: 6),
+        Tooltip(
+          message: _pluriel(pieces, 'pièce justificative', 'pièces justificatives'),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.attach_file, size: 14, color: c.encre2),
+              Text('$pieces', style: TextStyle(color: c.encre2, fontSize: 12)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -74,7 +93,7 @@ String _quand(String iso) {
 class EcranAbsences extends StatefulWidget {
   const EcranAbsences({super.key, this.etat});
 
-  /// « NON_JUSTIFIEE » : l'entrée « Justifications » du menu.
+  /// État de départ (« NON_JUSTIFIEE »…), pour ouvrir l'écran déjà filtré.
   final String? etat;
 
   @override
@@ -89,6 +108,8 @@ class _EcranAbsencesState extends State<EcranAbsences> with _ActionsAbsences<Ecr
   String? _matiere; // nom : la même matière existe dans plusieurs classes
   late String? _etat = widget.etat;
   String _tri = 'date';
+  // Affichage par élève : un bloc par élève, « Tout cocher » et « Justifier » (l'ancien écran Justifications).
+  bool _parEleve = false;
   DateTime? _du;
   DateTime? _au;
   final _recherche = TextEditingController();
@@ -97,19 +118,47 @@ class _EcranAbsencesState extends State<EcranAbsences> with _ActionsAbsences<Ecr
   final _lignes = <Map>[];
   Map? _page;
   bool _charge = false;
+  // Jour collé en haut de la liste en faisant défiler : celui de la première absence visible.
+  final _cadre = GlobalKey();
+  final _clesLignes = <String, GlobalKey>{};
+  final _clesJours = <String, GlobalKey>{};
+  String? _jourColle;
+  bool _calculPrevu = false;
+
+  void _majJourColle() {
+    final cadre = _cadre.currentContext?.findRenderObject() as RenderBox?;
+    if (cadre == null || !cadre.attached) return;
+    final haut = cadre.localToGlobal(Offset.zero).dy;
+    String? jour;
+    for (final l in _lignes) {
+      final b = _clesLignes[l['id']]?.currentContext?.findRenderObject() as RenderBox?;
+      if (b == null || !b.attached) continue;
+      if (b.localToGlobal(Offset.zero).dy + b.size.height > haut) {
+        jour = l['date'] as String;
+        break;
+      }
+    }
+    // Pas de bandeau tant que l'en-tête du jour est encore à l'écran.
+    if (jour != null) {
+      final e = _clesJours[jour]?.currentContext?.findRenderObject() as RenderBox?;
+      if (e != null && e.attached && e.localToGlobal(Offset.zero).dy >= haut) jour = null;
+    }
+    if (jour != _jourColle) setState(() => _jourColle = jour);
+  }
 
   String _chemin(int page) {
     final p = {
       'classeId': ?_classe,
       'matiere': ?_matiere,
       'etat': ?_etat,
-      'tri': _tri,
-      'sens': _tri == 'date' ? 'desc' : 'asc',
+      'tri': _parEleve ? 'eleve' : _tri,
+      'sens': !_parEleve && _tri == 'date' ? 'desc' : 'asc',
       if (_du != null) 'du': _iso(_du!),
       if (_au != null) 'au': _iso(_au!),
       if (_recherche.text.trim().isNotEmpty) 'q': _recherche.text.trim(),
       'page': '$page',
-      'taille': '$_taille',
+      // Par élève : tout d'un coup (maximum de l'API), pour ne pas couper un élève entre deux pages.
+      'taille': _parEleve ? '200' : '$_taille',
     };
     return '/absences?${Uri(queryParameters: p).query}';
   }
@@ -204,7 +253,21 @@ class _EcranAbsencesState extends State<EcranAbsences> with _ActionsAbsences<Ecr
             final t = p['totaux'] as Map;
             final eleve = _selection.isEmpty ? null : _selection.values.first;
             final minutesSel = _selection.values.fold<int>(0, (n, l) => n + (l['duree'] as int));
-            return Defilement(
+            final colle = _jourColle;
+            return Stack(key: _cadre, children: [
+              NotificationListener<ScrollNotification>(
+                onNotification: (_) {
+                  // Après le dessin de l'image : pendant le défilement, les positions ne sont pas encore à jour.
+                  if (!_parEleve && _tri == 'date' && !_calculPrevu) {
+                    _calculPrevu = true;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _calculPrevu = false;
+                      if (mounted) _majJourColle();
+                    });
+                  }
+                  return false;
+                },
+                child: Defilement(
               rafraichir: recharger,
               bas: sg && eleve != null
                   ? Card(
@@ -254,58 +317,65 @@ class _EcranAbsencesState extends State<EcranAbsences> with _ActionsAbsences<Ecr
                     Expanded(child: _total(context, 'Non justifiées', t['minutesNonJustifiees'] as int, c.danger, null, 'NON_JUSTIFIEE')),
                   ],
                 ),
-                Row(
-                  children: [
-                    PopupMenuButton<String>(
-                      tooltip: 'Trier',
-                      initialValue: _tri,
-                      onSelected: (v) => _filtrer(() => _tri = v),
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(value: 'date', child: Text('Par date (récentes)')),
-                        PopupMenuItem(value: 'eleve', child: Text('Par élève')),
-                        PopupMenuItem(value: 'duree', child: Text('Par durée')),
-                        PopupMenuItem(value: 'etat', child: Text('Par état')),
-                      ],
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.sort, size: 18, color: c.encre2),
-                            const SizedBox(width: 4),
-                            Text(switch (_tri) {
-                              'eleve' => 'Par élève',
-                              'duree' => 'Par durée',
-                              'etat' => 'Par état',
-                              _ => 'Par date',
-                            }, style: const TextStyle(fontWeight: FontWeight.w600)),
-                            const Icon(Icons.arrow_drop_down),
+                // Affichage, tri et export sur un fond, comme les filtres : lisibles sur le motif de l'écran.
+                Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 6, 4, 6),
+                    child: Row(
+                      children: [
+                        SegmentedButton<bool>(
+                          segments: const [
+                            ButtonSegment(value: false, label: Text('Par jour')),
+                            ButtonSegment(value: true, label: Text('Par élève')),
                           ],
+                          selected: {_parEleve},
+                          showSelectedIcon: false,
+                          style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                          onSelectionChanged: (v) => _filtrer(() => _parEleve = v.first),
                         ),
-                      ),
-                    ),
-                    const Spacer(),
-                    if ((p['total'] as int) > 0)
-                      PopupMenuButton<String>(
-                        tooltip: 'Exporter',
-                        onSelected: _exporter,
-                        itemBuilder: (_) => const [PopupMenuItem(value: 'xlsx', child: Text('Excel')), PopupMenuItem(value: 'pdf', child: Text('PDF'))],
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.download, size: 18, color: Theme.of(context).colorScheme.primary),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Exporter',
-                                style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
-                              ),
+                        if (!_parEleve)
+                          PopupMenuButton<String>(
+                            tooltip: switch (_tri) {
+                              'eleve' => 'Trié par élève',
+                              'duree' => 'Trié par durée',
+                              'etat' => 'Trié par état',
+                              _ => 'Trié par date',
+                            },
+                            initialValue: _tri,
+                            onSelected: (v) => _filtrer(() => _tri = v),
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(value: 'date', child: Text('Trier par date (récentes)')),
+                              PopupMenuItem(value: 'eleve', child: Text('Trier par élève')),
+                              PopupMenuItem(value: 'duree', child: Text('Trier par durée')),
+                              PopupMenuItem(value: 'etat', child: Text('Trier par état')),
                             ],
+                            icon: Icon(Icons.sort, color: c.encre2),
                           ),
-                        ),
-                      ),
-                  ],
+                        const Spacer(),
+                        if ((p['total'] as int) > 0)
+                          PopupMenuButton<String>(
+                            tooltip: 'Exporter',
+                            onSelected: _exporter,
+                            itemBuilder: (_) => const [PopupMenuItem(value: 'xlsx', child: Text('Excel')), PopupMenuItem(value: 'pdf', child: Text('PDF'))],
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.download, size: 18, color: Theme.of(context).colorScheme.primary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Exporter',
+                                    style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
                 if (_lignes.isEmpty)
                   Carte(
@@ -319,17 +389,21 @@ class _EcranAbsencesState extends State<EcranAbsences> with _ActionsAbsences<Ecr
                       ],
                     ),
                   ),
-                for (final (i, l) in _lignes.indexed) ...[
-                  if (_tri == 'date' && (i == 0 || _lignes[i - 1]['date'] != l['date']))
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4, left: 2),
-                      child: Text(
-                        '${_dateLongue(l['date'] as String)} · ${_pluriel(_lignes.where((x) => x['date'] == l['date']).length, 'absence')}',
-                        style: TextStyle(color: c.encre2, fontSize: 12.5, fontWeight: FontWeight.w700),
+                if (_parEleve)
+                  for (final ls in _parInscription()) _blocEleve(context, ls, sg)
+                else
+                  for (final (i, l) in _lignes.indexed) ...[
+                    if (_tri == 'date' && (i == 0 || _lignes[i - 1]['date'] != l['date']))
+                      Padding(
+                        key: _clesJours.putIfAbsent(l['date'] as String, GlobalKey.new),
+                        padding: const EdgeInsets.only(top: 4, left: 2),
+                        child: Text(
+                          '${_dateLongue(l['date'] as String)} · ${_pluriel(_lignes.where((x) => x['date'] == l['date']).length, 'absence')}',
+                          style: TextStyle(color: c.encre2, fontSize: 12.5, fontWeight: FontWeight.w700),
+                        ),
                       ),
-                    ),
-                  _carte(context, l, sg),
-                ],
+                    KeyedSubtree(key: _clesLignes.putIfAbsent(l['id'] as String, GlobalKey.new), child: _carte(context, l, sg)),
+                  ],
                 if (_lignes.length < (p['total'] as int))
                   Center(
                     child: TextButton.icon(
@@ -343,10 +417,71 @@ class _EcranAbsencesState extends State<EcranAbsences> with _ActionsAbsences<Ecr
                     child: TextButton.icon(onPressed: _motifs, icon: const Icon(Icons.tune, size: 18), label: const Text('Gérer les motifs')),
                   ),
               ],
-            );
+                ),
+              ),
+              if (colle != null && !_parEleve && _tri == 'date')
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Material(
+                    color: c.primairePale,
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+                      child: Text(
+                        '${_dateLongue(colle)} · ${_pluriel(_lignes.where((x) => x['date'] == colle).length, 'absence')}',
+                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ),
+            ]);
           },
         );
       },
+    );
+  }
+
+  /// Liste déroulante sans étiquette au-dessus : la valeur affichée dit déjà ce qu'on filtre.
+  Widget _liste(String nom, String? valeur, List<(String, String)> options, ValueChanged<String?> changer) {
+    return DropdownButtonFormField<String>(
+      key: ValueKey('$nom|${valeur ?? ''}'),
+      initialValue: options.any((o) => o.$1 == (valeur ?? '')) ? (valeur ?? '') : '',
+      isExpanded: true,
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 14.5),
+      iconSize: 20,
+      decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.fromLTRB(10, 14, 4, 14)),
+      items: [
+        for (final o in options)
+          DropdownMenuItem(
+            value: o.$1,
+            child: Text(o.$2, overflow: TextOverflow.ellipsis),
+          ),
+      ],
+      onChanged: changer,
+    );
+  }
+
+  /// Date du filtre « Du … au … » : jj/mm/aaaa, ou vide.
+  Widget _boutonDate(
+    BuildContext context,
+    DateTime? valeur, {
+    required DateTime premiere,
+    required DateTime? derniere,
+    required ValueChanged<DateTime> choisi,
+  }) {
+    final n = DateTime.now();
+    final auj = DateTime(n.year, n.month, n.day);
+    String jjmmaaaa(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+      onPressed: () async {
+        final fin = derniere ?? auj;
+        final d = await showDatePicker(context: context, firstDate: premiere, lastDate: fin, initialDate: valeur ?? fin);
+        if (d != null) choisi(d);
+      },
+      child: Text(valeur == null ? 'jj/mm/aaaa' : jjmmaaaa(valeur), style: TextStyle(color: valeur == null ? context.c.encre3 : null)),
     );
   }
 
@@ -361,12 +496,10 @@ class _EcranAbsencesState extends State<EcranAbsences> with _ActionsAbsences<Ecr
             Row(
               children: [
                 Expanded(
-                  child: Choix<String>(
-                    libelle: 'Classe',
-                    valeur: _classe ?? '',
-                    options: [('', 'Toutes'), for (final c in classes) (c['id'] as String, c['nom'] as String)],
-                    changer: (v) => _filtrer(() => _classe = v == null || v.isEmpty ? null : v),
-                  ),
+                  child: _liste('Classe', _classe, [
+                    ('', 'Toutes les classes'),
+                    for (final c in classes) (c['id'] as String, c['nom'] as String),
+                  ], (v) => _filtrer(() => _classe = v == null || v.isEmpty ? null : v)),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -375,12 +508,11 @@ class _EcranAbsencesState extends State<EcranAbsences> with _ActionsAbsences<Ecr
                     charger: () async => await Api.i.get('/matieres') as List,
                     construire: (context, matieres, _) {
                       final noms = {for (final m in matieres.cast<Map>()) m['nom'] as String}.toList()..sort();
-                      return Choix<String>(
-                        libelle: 'Matière',
-                        valeur: _matiere ?? '',
-                        options: [('', 'Toutes'), for (final m in noms) (m, m)],
-                        changer: (v) => _filtrer(() => _matiere = v == null || v.isEmpty ? null : v),
-                      );
+                      // « Matière » plutôt que « Toutes les matières » : la moitié de l'écran suffit à le lire.
+                      return _liste('Matière', _matiere, [
+                        ('', 'Matière'),
+                        for (final m in noms) (m, m),
+                      ], (v) => _filtrer(() => _matiere = v == null || v.isEmpty ? null : v));
                     },
                   ),
                 ),
@@ -398,53 +530,37 @@ class _EcranAbsencesState extends State<EcranAbsences> with _ActionsAbsences<Ecr
               onSelectionChanged: (s) => _filtrer(() => _etat = s.first.isEmpty ? null : s.first),
             ),
             const SizedBox(height: 10),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final (libelle, du, au) in _periodes) ...[
-                    ChoiceChip(
-                      label: Text(libelle),
-                      showCheckmark: false,
-                      selected: _du == du && _au == au,
-                      onSelected: (_) => _filtrer(() {
-                        _du = du;
-                        _au = au;
-                      }),
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                  Builder(
-                    builder: (context) {
-                      // Plage choisie à la main : la pastille la montre.
-                      final libre = _du != null && !_periodes.any((x) => x.$2 == _du && x.$3 == _au);
-                      String court(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
-                      return ChoiceChip(
-                        avatar: const Icon(Icons.date_range, size: 18),
-                        label: Text(libre ? '${court(_du!)} – ${court(_au ?? DateTime.now())}' : 'Dates…'),
-                        showCheckmark: false,
-                        selected: libre,
-                        onSelected: (_) async {
-                          final n = DateTime.now();
-                          final plage = await showDateRangePicker(
-                            context: context,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(n.year, n.month, n.day),
-                            initialDateRange: _du == null ? null : DateTimeRange(start: _du!, end: _au ?? DateTime(n.year, n.month, n.day)),
-                            helpText: 'Période',
-                            saveText: 'Appliquer',
-                          );
-                          if (plage == null) return;
-                          _filtrer(() {
-                            _du = plage.start;
-                            _au = plage.end;
-                          });
-                        },
-                      );
-                    },
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final (libelle, du, au) in _periodes)
+                  ChoiceChip(
+                    label: Text(libelle),
+                    showCheckmark: false,
+                    selected: _du == du && _au == au,
+                    onSelected: (_) => _filtrer(() {
+                      _du = du;
+                      _au = au;
+                    }),
                   ),
-                ],
-              ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Text('Du', style: TextStyle(color: context.c.encre2)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _boutonDate(context, _du, premiere: DateTime(2020), derniere: _au, choisi: (d) => _filtrer(() => _du = d)),
+                ),
+                const SizedBox(width: 8),
+                Text('au', style: TextStyle(color: context.c.encre2)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _boutonDate(context, _au, premiere: _du ?? DateTime(2020), derniere: null, choisi: (d) => _filtrer(() => _au = d)),
+                ),
+              ],
             ),
             const SizedBox(height: 10),
             TextField(
@@ -503,6 +619,119 @@ class _EcranAbsencesState extends State<EcranAbsences> with _ActionsAbsences<Ecr
     );
   }
 
+  List<List<Map>> _parInscription() {
+    final m = <String, List<Map>>{};
+    for (final l in _lignes) {
+      (m[l['inscriptionId'] as String] ??= []).add(l);
+    }
+    return m.values.toList();
+  }
+
+  /// Un élève : ses absences à cocher, « Tout cocher » et « Justifier ».
+  Widget _blocEleve(BuildContext context, List<Map> ls, bool sg) {
+    final c = context.c;
+    final e = ls.first;
+    final nj = ls.where((l) => l['justification'] == null).toList();
+    final minutesNj = nj.fold<int>(0, (n, l) => n + (l['duree'] as int));
+    final autre = _selection.isNotEmpty && _selection.values.first['inscriptionId'] != e['inscriptionId'];
+    final choisies = nj.where((l) => _selection.containsKey(l['id'])).length;
+    final toutCoche = nj.isNotEmpty && choisies == nj.length;
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: c.surface2,
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: '${e['nom']} ',
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5),
+                      ),
+                      TextSpan(
+                        text: '${e['prenoms']}',
+                        style: TextStyle(color: c.encre2, fontSize: 15.5),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '${e['classe']} · n° ${e['numero']} · ${nj.isEmpty ? 'tout est justifié' : '${duree(minutesNj)} non justifiées'}',
+                  style: TextStyle(color: nj.isEmpty ? c.succes : c.danger, fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+          for (final l in ls)
+            InkWell(
+              onTap: () => _detail(l['id'] as String),
+              child: Container(
+                color: _selection.containsKey(l['id']) ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.10) : null,
+                padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('${_date(l['date'] as String)} · ${l['debut']} – ${l['fin']}', style: TextStyle(color: c.encre2, fontSize: 12.5)),
+                          Text('${l['matiere']} · ${duree(l['duree'] as int)}', style: const TextStyle(fontSize: 13.5)),
+                          if (l['enseignantAbsent'] == true)
+                            Text(
+                              'Enseignant absent',
+                              style: TextStyle(color: c.alerte, fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          const SizedBox(height: 3),
+                          _PastilleEtat(l['justification'] as Map?),
+                        ],
+                      ),
+                    ),
+                    if (sg && l['justification'] == null)
+                      Checkbox(value: _selection.containsKey(l['id']), onChanged: autre ? null : (_) => _basculer(l))
+                    else
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Icon(Icons.chevron_right, color: c.encre3),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          if (sg && nj.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 8, 6),
+              child: Row(
+                children: [
+                  TextButton(
+                    onPressed: autre
+                        ? null
+                        : () => setState(() {
+                            _selection.clear();
+                            if (!toutCoche) _selection.addAll({for (final l in nj) l['id'] as String: l});
+                          }),
+                    child: Text(toutCoche ? 'Tout décocher' : 'Tout cocher'),
+                  ),
+                  const Spacer(),
+                  FilledButton.icon(
+                    onPressed: choisies == 0 ? null : () => _justifier([..._selection.values]),
+                    icon: const Icon(Icons.verified_user_outlined, size: 18),
+                    label: Text(choisies == 0 ? 'Justifier' : 'Justifier ${_pluriel(choisies, 'absence')}'),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _carte(BuildContext context, Map l, bool sg) {
     final c = context.c;
     final j = l['justification'] as Map?;
@@ -536,7 +765,7 @@ class _EcranAbsencesState extends State<EcranAbsences> with _ActionsAbsences<Ecr
                       ),
                     ),
                     Text(
-                      _tri == 'date' ? '${l['classe']}' : '${l['classe']} · ${_date(l['date'] as String)}',
+                      _tri == 'date' ? '${l['classe']} · n° ${l['numero']}' : '${l['classe']} · n° ${l['numero']} · ${_date(l['date'] as String)}',
                       style: TextStyle(color: c.encre2, fontSize: 12.5),
                     ),
                     Text('${l['matiere']} · ${l['debut']} – ${l['fin']} · ${duree(l['duree'] as int)}', style: const TextStyle(fontSize: 13.5)),
@@ -891,264 +1120,5 @@ mixin _ActionsAbsences<T extends StatefulWidget> on State<T> {
         ),
       ),
     );
-  }
-}
-
-/// Justifications : les absences non justifiées regroupées par élève, chacun avec « Justifier » ; et les
-/// justifications enregistrées (motif, réception, pièces), à ouvrir pour corriger ou retirer.
-class EcranJustifications extends StatefulWidget {
-  const EcranJustifications({super.key});
-  @override
-  State<EcranJustifications> createState() => _EcranJustificationsState();
-}
-
-class _EcranJustificationsState extends State<EcranJustifications> with _ActionsAbsences<EcranJustifications> {
-  static const _max = 200;
-  String _onglet = 'NON_JUSTIFIEE';
-  String? _classe;
-  final _recherche = TextEditingController();
-  int _version = 0;
-  // Rien n'est coché au départ : le SG coche les absences que couvre le justificatif reçu.
-  final _cochees = <String>{};
-
-  @override
-  void _change() => setState(() {
-    _version++;
-    _cochees.clear();
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final sg = Etat.i.estSG;
-    return Charge<List<Map<String, dynamic>>>(
-      charger: chargerClasses,
-      construire: (context, toutes, _) {
-        final classes = [...toutes]
-          ..sort((x, y) {
-            final n = (x['niveau'] as int).compareTo(y['niveau'] as int);
-            return n != 0 ? n : (x['nom'] as String).compareTo(y['nom'] as String);
-          });
-        final p = {'etat': _onglet, 'classeId': ?_classe, if (_recherche.text.trim().isNotEmpty) 'q': _recherche.text.trim(), 'taille': '$_max'};
-        return Charge<Map>(
-          key: ValueKey('$_onglet|$_classe|${_recherche.text}|$_version'),
-          charger: () async => await Api.i.get('/absences?${Uri(queryParameters: p).query}') as Map,
-          construire: (context, page, recharger) {
-            final c = context.c;
-            final lignes = (page['lignes'] as List).cast<Map>();
-            final total = page['total'] as int;
-            final aJustifier = _onglet == 'NON_JUSTIFIEE';
-            return Defilement(
-              rafraichir: recharger,
-              enfants: [
-                SegmentedButton<String>(
-                  segments: [
-                    ButtonSegment(value: 'NON_JUSTIFIEE', label: Text(aJustifier ? 'À justifier · $total' : 'À justifier')),
-                    ButtonSegment(value: 'JUSTIFIEE', label: Text(!aJustifier ? 'Enregistrées · $total' : 'Enregistrées')),
-                  ],
-                  selected: {_onglet},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (s) => setState(() {
-                    _onglet = s.first;
-                    _cochees.clear();
-                  }),
-                ),
-                Card(
-                  margin: EdgeInsets.zero,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      children: [
-                        Choix<String>(
-                          libelle: 'Classe',
-                          valeur: _classe ?? '',
-                          options: [('', 'Toutes les classes'), for (final x in classes) (x['id'] as String, x['nom'] as String)],
-                          changer: (v) => setState(() => _classe = v == null || v.isEmpty ? null : v),
-                        ),
-                        const SizedBox(height: 10),
-                        TextField(
-                          controller: _recherche,
-                          textInputAction: TextInputAction.search,
-                          decoration: const InputDecoration(labelText: 'Élève (nom, prénom ou matricule)', prefixIcon: Icon(Icons.search)),
-                          onSubmitted: (_) => setState(() {}),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (total > lignes.length)
-                  Text(
-                    '  $total absences : seules les ${lignes.length} plus récentes sont affichées. Choisissez une classe ou un élève.',
-                    style: TextStyle(color: c.alerte, fontSize: 12.5),
-                  ),
-                if (lignes.isEmpty)
-                  Carte(
-                    enfant: Vide(
-                      aJustifier ? 'Rien à justifier' : 'Aucune justification',
-                      texte: aJustifier
-                          ? 'Aucune absence non justifiée ne correspond à ces filtres.'
-                          : 'Aucune justification enregistrée ne correspond à ces filtres.',
-                    ),
-                  ),
-                if (aJustifier) ..._parEleve(context, lignes, sg) else ..._enregistrees(context, lignes),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  List<Widget> _parEleve(BuildContext context, List<Map> lignes, bool sg) {
-    final c = context.c;
-    final groupes = <String, List<Map>>{};
-    for (final l in lignes) {
-      groupes.putIfAbsent(l['inscriptionId'] as String, () => []).add(l);
-    }
-    final liste = groupes.values.toList()..sort((x, y) => '${x.first['nom']} ${x.first['prenoms']}'.compareTo('${y.first['nom']} ${y.first['prenoms']}'));
-    return [
-      for (final abs in liste)
-        Card(
-          margin: EdgeInsets.zero,
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                color: c.surface2,
-                padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: '${abs.first['nom']} ',
-                                  style: const TextStyle(fontWeight: FontWeight.w700),
-                                ),
-                                TextSpan(
-                                  text: '${abs.first['prenoms']}',
-                                  style: TextStyle(color: c.encre2),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            '${abs.first['classe']} · ${_pluriel(abs.length, 'absence')} · ${duree(abs.fold<int>(0, (n, l) => n + (l['duree'] as int)))}',
-                            style: TextStyle(color: c.danger, fontSize: 12.5, fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (sg)
-                      Builder(
-                        builder: (context) {
-                          final choisies = abs.where((l) => _cochees.contains(l['id'])).toList();
-                          return FilledButton(
-                            onPressed: choisies.isEmpty ? null : () => _justifier(choisies),
-                            child: Text(choisies.isEmpty ? 'Justifier' : 'Justifier (${choisies.length})'),
-                          );
-                        },
-                      ),
-                  ],
-                ),
-              ),
-              if (sg && abs.length > 1)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: () => setState(() {
-                      final toutes = abs.every((l) => _cochees.contains(l['id']));
-                      for (final l in abs) {
-                        toutes ? _cochees.remove(l['id']) : _cochees.add(l['id'] as String);
-                      }
-                    }),
-                    child: Text(abs.every((l) => _cochees.contains(l['id'])) ? 'Tout décocher' : 'Tout cocher'),
-                  ),
-                ),
-              for (final l in abs)
-                InkWell(
-                  onTap: () => _detail(l['id'] as String),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 2, 12, 2),
-                    child: Row(
-                      children: [
-                        if (sg)
-                          Checkbox(
-                            value: _cochees.contains(l['id']),
-                            onChanged: (v) => setState(() => v == true ? _cochees.add(l['id'] as String) : _cochees.remove(l['id'])),
-                          )
-                        else
-                          const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('${_date(l['date'] as String)} · ${l['matiere']}', style: const TextStyle(fontSize: 13.5)),
-                              Text('${l['debut']} – ${l['fin']} · ${duree(l['duree'] as int)}', style: TextStyle(color: c.encre2, fontSize: 12.5)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-    ];
-  }
-
-  List<Widget> _enregistrees(BuildContext context, List<Map> lignes) {
-    final c = context.c;
-    return [
-      for (final l in lignes)
-        Card(
-          margin: EdgeInsets.zero,
-          child: InkWell(
-            onTap: () => _detail(l['id'] as String),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Builder(
-                builder: (context) {
-                  final j = l['justification'] as Map;
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: '${l['nom']} ',
-                              style: const TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                            TextSpan(
-                              text: '${l['prenoms']}',
-                              style: TextStyle(color: c.encre2),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        '${l['classe']} · ${_date(l['date'] as String)} · ${l['matiere']} ${l['debut']} – ${l['fin']}',
-                        style: TextStyle(color: c.encre2, fontSize: 12.5),
-                      ),
-                      const SizedBox(height: 4),
-                      EtatTexte('Justifiée · ${j['motif']}', ton: 'succes'),
-                      Text(
-                        'Reçu le ${_date(j['dateReception'] as String)} · ${_pluriel((j['pieces'] as List).length, 'pièce')}${j['par'] == null ? '' : ' · ${j['par']}'}',
-                        style: TextStyle(color: c.encre2, fontSize: 12.5),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-    ];
   }
 }

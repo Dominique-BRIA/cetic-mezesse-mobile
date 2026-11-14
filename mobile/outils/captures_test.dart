@@ -258,6 +258,15 @@ void main() {
     await choisir(t, 'Classe', '1re année Mécanique A');
     await toucher(t, find.byType(FloatingActionButton));
   });
+  // Absences : emploi du temps, feuille d'appel, absences et justifications, bilan, enseignants absents.
+  ecran('sg-emploi-du-temps', role: sg, destination: 'emploi-du-temps', gestes: (t) => choisir(t, 'Classe', '1re année Mécanique A'));
+  ecran('sg-appel', role: sg, destination: 'appel');
+  ecran('sg-absences', role: sg, destination: 'absences');
+  ecran('sg-absences-eleve', role: sg, destination: 'absences', gestes: (t) => toucher(t, find.text('Par élève')));
+  ecran('sg-bilan-absences', role: sg, destination: 'bilan-absences', gestes: (t) => choisir(t, 'Classe', '2e année Électricité'));
+  ecran('sg-enseignants-absents', role: sg, destination: 'enseignants-absents');
+  ecran('dir-bilan-absences', role: directeur, destination: 'bilan-absences', gestes: (t) => choisir(t, 'Classe', '2e année Électricité'));
+  ecran('dir-eleves-sanctions', role: directeur, destination: 'eleves');
   ecran('sg-eleves', role: sg, destination: 'eleves');
   ecran('sg-ajout-eleves', role: sg, destination: 'eleves', gestes: (t) => toucher(t, find.text('Ajouter des élèves')));
   ecran('sg-import', role: sg, destination: 'eleves', gestes: (t) => toucher(t, find.text('Importer')));

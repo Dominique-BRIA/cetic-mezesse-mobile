@@ -10,6 +10,7 @@ import '../etat.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'bilan_absences.dart' show SanctionEleve;
 import 'saisie_eleves.dart';
 import 'verification.dart';
 
@@ -23,6 +24,19 @@ class _EcranElevesState extends State<EcranEleves> {
   String _classe = '';
   String _recherche = '';
   int _version = 0;
+  Map<String, Map> _sanctions = {};
+  String _sanction = ''; // filtre par sanction (absences non justifiées de l'année)
+
+  bool _retenu(Map i) {
+    if (_sanction.isEmpty) return true;
+    final x = _sanctions[i['id']];
+    if (x == null) return false;
+    return switch (_sanction) {
+      'AVEC' => x['libelleSanction'] != null,
+      'A_DECIDER' => x['palierExclusion'] == true && x['decision'] == null,
+      _ => x['sanction'] == _sanction,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +68,20 @@ class _EcranElevesState extends State<EcranEleves> {
                       valeur: _classe,
                       options: [('', 'Toutes les classes'), for (final c in classes) (c['id'] as String, '${c['nom']} (${c['_count']['inscriptions']})')],
                       changer: (v) => setState(() => _classe = v ?? ''),
+                    ),
+                    const SizedBox(height: 10),
+                    Choix<String>(
+                      libelle: 'Sanction',
+                      valeur: _sanction,
+                      options: const [
+                        ('', 'Toutes'),
+                        ('AVEC', 'Avec une sanction'),
+                        ('AVERTISSEMENT', 'Avertissement conduite'),
+                        ('BLAME', 'Blâme conduite'),
+                        ('EXCLUSION', 'Exclusion'),
+                        ('A_DECIDER', 'Exclusion à décider'),
+                      ],
+                      changer: (v) => setState(() => _sanction = v ?? ''),
                     ),
                     const SizedBox(height: 10),
                     TextField(
@@ -102,20 +130,35 @@ class _EcranElevesState extends State<EcranEleves> {
             Expanded(
               child: Charge<List>(
                 key: ValueKey('$_classe|$_recherche|$_version'),
-                charger: () async => await Api.i.get('/eleves?classeId=$_classe&q=${Uri.encodeQueryComponent(_recherche)}') as List,
-                construire: (context, eleves, recharger) => Defilement(
+                // Les élèves, et la sanction de l'année de chacun (absences non justifiées).
+                charger: () async {
+                  final liste = await Api.i.get('/eleves?classeId=$_classe&q=${Uri.encodeQueryComponent(_recherche)}') as List;
+                  final sanctions = (await Api.i.get('/absences/sanctions${_classe.isEmpty ? '' : '?classeId=$_classe'}') as List).cast<Map>();
+                  _sanctions = {for (final s in sanctions) s['inscriptionId'] as String: s};
+                  return liste;
+                },
+                construire: (context, tous, recharger) {
+                  final eleves = tous.cast<Map>().where(_retenu).toList();
+                  return Defilement(
                   rafraichir: recharger,
                   enfants: [
                     Carte(
-                      titre: '${eleves.length} élève(s)',
+                      titre: '${eleves.length} élève${eleves.length > 1 ? 's' : ''}${_sanction.isEmpty ? '' : ' sur ${tous.length}'}',
                       sansMarge: true,
                       enfant: eleves.isEmpty
-                          ? const Vide('Aucun élève')
+                          ? Vide(_sanction.isEmpty ? 'Aucun élève' : 'Aucun élève avec cette sanction')
                           : Column(children: [
-                              for (final i in eleves.cast<Map>())
+                              for (final i in eleves)
                                 ListTile(
+                                  leading: SizedBox(
+                                    width: 28,
+                                    child: Text('${i['numero'] ?? ''}', textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  ),
                                   title: Text('${i['eleve']['nom']} ${i['eleve']['prenoms']}', style: const TextStyle(fontWeight: FontWeight.w500)),
-                                  subtitle: Text('${i['eleve']['matricule']} · ${i['classe']['nom']} · ${i['eleve']['sexe']}'),
+                                  subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text('${i['eleve']['matricule']} · ${i['classe']['nom']} · ${i['eleve']['sexe']}'),
+                                    if (_sanctions[i['id']] != null) SanctionEleve(e: _sanctions[i['id']]!, change: () async => setState(() => _version++)),
+                                  ]),
                                   trailing: const Icon(Icons.chevron_right),
                                   onTap: () async {
                                     await Navigator.push(context, MaterialPageRoute(builder: (_) => FicheEleve(id: i['eleve']['id'] as String)));
@@ -125,7 +168,8 @@ class _EcranElevesState extends State<EcranEleves> {
                             ]),
                     ),
                   ],
-                ),
+                );
+                },
               ),
             ),
           ]),

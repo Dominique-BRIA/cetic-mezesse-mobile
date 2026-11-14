@@ -160,8 +160,9 @@ class _EcranParametresState extends State<EcranParametres> {
   final Map<String, TextEditingController> _etab = {};
   final Map<String, List<(TextEditingController, TextEditingController, TextEditingController)>> _baremes = {'GRADE': [], 'COTE': []};
   final _seuil = TextEditingController();
-  // Sanctions pour absences non justifiées : nom, ligne du bulletin, à partir de combien d'heures.
-  final List<(TextEditingController, ValueNotifier<String>, TextEditingController)> _sanctions = [];
+  // Sanctions pour absences non justifiées : trois paliers fixes, le SG règle à partir de combien d'heures.
+  static const _paliers = [('AVERTISSEMENT', 'Avertissement conduite'), ('BLAME', 'Blâme conduite'), ('EXCLUSION', 'Exclusion')];
+  final Map<String, TextEditingController> _sanctions = {for (final (l, _) in _paliers) l: TextEditingController()};
 
   static String _heures(Object? minutes) {
     if (minutes == null) return '';
@@ -178,13 +179,10 @@ class _EcranParametresState extends State<EcranParametres> {
       _etab[k] = TextEditingController(text: e[k] == null ? '' : '${e[k]}');
     }
     _seuil.text = ((e['seuilTableauHonneur'] as num?) ?? 12).toStringAsFixed(2).replaceAll('.', ',');
-    final s = (await Api.i.get('/sanctions-absences', annee: false) as List).cast<Map>()
-      ..sort((x, y) => (x['minutes'] as int).compareTo(y['minutes'] as int));
-    _sanctions
-      ..clear()
-      ..addAll([
-        for (final l in s) (TextEditingController(text: l['libelle'] as String), ValueNotifier(l['ligne'] as String), TextEditingController(text: _heures(l['minutes']))),
-      ]);
+    final s = (await Api.i.get('/sanctions-absences', annee: false) as List).cast<Map>();
+    for (final (l, _) in _paliers) {
+      _sanctions[l]!.text = _heures(s.where((x) => x['ligne'] == l).firstOrNull?['minutes']);
+    }
     final b = (await Api.i.get('/baremes', annee: false) as List).cast<Map>()
       ..sort((x, y) => (y['min'] as num).compareTo(x['min'] as num));
     for (final t in ['GRADE', 'COTE']) {
@@ -263,112 +261,48 @@ class _EcranParametresState extends State<EcranParametres> {
     );
   }
 
-  static const _lignesBulletin = [
-    ('AVERTISSEMENT', 'Avertissement'),
-    ('BLAME', 'Blâme'),
-    ('EXCLUSION', 'Exclusion (Proviseur)'),
-    ('AUCUNE', 'Aucune ligne'),
-  ];
-
-  /// Ligne du bulletin devinée d'après le nom (le SG peut la changer).
-  static String _devinerLigne(String nom) {
-    final n = nom.toLowerCase().replaceAll(RegExp('[éèêë]'), 'e').replaceAll(RegExp('[âà]'), 'a');
-    if (n.contains('exclu') || n.contains('renvoi') || n.contains('conseil de discipline')) return 'EXCLUSION';
-    if (n.contains('blame')) return 'BLAME';
-    if (n.contains('avertissement')) return 'AVERTISSEMENT';
-    return 'AUCUNE';
-  }
-
-  /// Sanctions pour absences non justifiées : le SG les remplit comme les cotes.
+  /// Sanctions pour absences non justifiées : le SG indique à partir de combien d'heures ; vide : non utilisée.
   Widget _sanctionsAbsences() {
-    return StatefulBuilder(
-      builder: (context, maj) => Carte(
-        titre: 'Sanctions pour absences non justifiées',
-        action: _modifiable
-            ? TextButton(
-                onPressed: () => agir(
-                  context,
-                  () => Api.i.envoyer('PUT', '/sanctions-absences',
-                      corps: [
-                        for (final (nom, ligne, heures) in _sanctions)
-                          {'libelle': nom.text.trim(), 'ligne': ligne.value, 'heures': double.tryParse(heures.text.trim().replaceAll(',', '.'))}
-                      ],
-                      annee: false),
-                  succes: 'Sanctions enregistrées.',
-                ),
-                child: const Text('Enregistrer'),
-              )
-            : null,
-        enfant: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(
-            "Heures non justifiées cumulées depuis la rentrée. Chaque sanction s'applique à partir de son nombre d'heures (inclus) ; le bulletin porte la plus élevée atteinte. Une exclusion est décidée par le Proviseur, qui est prévenu.",
-            style: TextStyle(color: context.c.encre2, fontSize: 12.5),
-          ),
-          if (_sanctions.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Text('Aucune sanction réglée.', style: TextStyle(color: context.c.encre3, fontSize: 13)),
-            ),
-          for (final ligne in _sanctions)
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Expanded(
-                  child: Column(children: [
-                    TextField(
-                      controller: ligne.$1,
-                      readOnly: !_modifiable,
-                      decoration: const InputDecoration(labelText: 'Sanction'),
-                    ),
-                    const SizedBox(height: 6),
-                    ValueListenableBuilder<String>(
-                      valueListenable: ligne.$2,
-                      builder: (context, v, _) => Choix<String>(
-                        key: ValueKey(v),
-                        libelle: 'Sur le bulletin',
-                        valeur: v,
-                        options: _lignesBulletin,
-                        changer: _modifiable ? (x) => ligne.$2.value = x ?? 'AUCUNE' : (_) {},
-                      ),
-                    ),
-                  ]),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 84,
-                  child: TextField(
-                    controller: ligne.$3,
-                    readOnly: !_modifiable,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Dès', suffixText: 'h'),
-                  ),
-                ),
-                if (_modifiable) IconButton(icon: const Icon(Icons.close, size: 18), tooltip: 'Retirer', onPressed: () => maj(() => _sanctions.remove(ligne))),
-              ]),
-            ),
-          if (_modifiable)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Ajouter une sanction'),
-                onPressed: () => maj(() {
-                  final nom = TextEditingController();
-                  final ligne = ValueNotifier('AUCUNE');
-                  // Tant que le SG n'a pas choisi la ligne, elle suit le nom tapé.
-                  var choisie = false;
-                  ligne.addListener(() {
-                    if (ligne.value != _devinerLigne(nom.text)) choisie = true;
-                  });
-                  nom.addListener(() {
-                    if (!choisie) ligne.value = _devinerLigne(nom.text);
-                  });
-                  _sanctions.add((nom, ligne, TextEditingController()));
-                }),
+    return Carte(
+      titre: 'Sanctions pour absences non justifiées',
+      action: _modifiable
+          ? TextButton(
+              onPressed: () => agir(
+                context,
+                () => Api.i.envoyer('PUT', '/sanctions-absences',
+                    corps: [
+                      for (final (l, _) in _paliers)
+                        {'ligne': l, 'heures': _sanctions[l]!.text.trim().isEmpty ? null : double.tryParse(_sanctions[l]!.text.trim().replaceAll(',', '.'))}
+                    ],
+                    annee: false),
+                succes: 'Sanctions enregistrées.',
               ),
-            ),
-        ]),
-      ),
+              child: const Text('Enregistrer'),
+            )
+          : null,
+      enfant: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text(
+          "Heures non justifiées cumulées depuis la rentrée. Le bulletin porte la sanction la plus élevée atteinte. À l'exclusion, le Directeur est prévenu et décide : exclusion définitive, exclusion temporaire ou sursis. Case vide : sanction non utilisée.",
+          style: TextStyle(color: context.c.encre2, fontSize: 12.5),
+        ),
+        for (final (l, libelle) in _paliers)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Row(children: [
+              Expanded(child: Text(libelle, style: const TextStyle(fontWeight: FontWeight.w600))),
+              SizedBox(
+                width: 110,
+                child: TextField(
+                  controller: _sanctions[l],
+                  readOnly: !_modifiable,
+                  textAlign: TextAlign.right,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(labelText: 'À partir de', suffixText: 'h', isDense: true),
+                ),
+              ),
+            ]),
+          ),
+      ]),
     );
   }
 

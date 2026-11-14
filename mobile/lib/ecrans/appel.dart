@@ -16,6 +16,15 @@ import 'organisation.dart';
 
 const _jours = ['', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 
+/// Jour de cours le plus proche en partant de [d] dans le sens [pas] (-1 ou +1) : le week-end est sauté.
+DateTime _jourDeCours(DateTime d, int pas) {
+  var j = DateTime(d.year, d.month, d.day);
+  while (j.weekday >= 6) {
+    j = j.add(Duration(days: pas));
+  }
+  return j;
+}
+
 String _iso(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
 String _dateLongue(String iso, int jour) {
@@ -41,7 +50,8 @@ class EcranAppel extends StatefulWidget {
 
 class _EcranAppelState extends State<EcranAppel> {
   String? _classe;
-  DateTime _date = DateTime.now();
+  // Le week-end, la feuille s'ouvre sur le dernier vendredi.
+  DateTime _date = _jourDeCours(DateTime.now(), -1);
   int _rechargement = 0;
   Map? _vue;
   // État de l'appel du jour par classe : fait (absents), à faire, pas de cours.
@@ -202,7 +212,7 @@ class _EcranAppelState extends State<EcranAppel> {
     String sans(String t) => t.toLowerCase().replaceAll(RegExp('[éèêë]'), 'e').replaceAll(RegExp('[àâä]'), 'a').replaceAll(RegExp('[îï]'), 'i').replaceAll(RegExp('[ôö]'), 'o').replaceAll(RegExp('[ûüù]'), 'u').replaceAll('ç', 'c');
     final q = sans(_recherche.text.trim());
     return eleves
-        .where((e) => q.isEmpty || sans('${e['nom']} ${e['prenoms']} ${e['matricule']}').contains(q))
+        .where((e) => q.isEmpty || '${e['numero']}' == q || sans('${e['nom']} ${e['prenoms']} ${e['matricule']}').contains(q))
         .where((e) => !_seulementAbsents || _minutes(e) > 0)
         .toList();
   }
@@ -256,6 +266,53 @@ class _EcranAppelState extends State<EcranAppel> {
       if (s != null) seance = (vue['seances'] as List).cast<Map>().where((x) => x['creneauId'] == s['creneauId']).firstOrNull;
     }
     if (mounted) await _formulaireSeance(seance);
+  }
+
+  /// Toucher l'en-tête de la séance : l'enseignant prévu est marqué absent, ou de nouveau présent.
+  Future<void> _basculerEnseignant(Map s) async {
+    if (s['statut'] == 'ANNULEE') {
+      message(context, 'Séance annulée : passez par « Modifier la séance… » pour la rétablir.');
+      return;
+    }
+    if (s['remplacant'] != null) {
+      message(context, 'Remplacé par ${_personne(s['remplacant'] as Map)} : la séance a été assurée. Pour changer, « Modifier la séance… ».');
+      return;
+    }
+    final qui = _personne(s['enseignant'] as Map?).isEmpty ? "L'enseignant" : _personne(s['enseignant'] as Map?);
+    final absent = s['enseignantAbsent'] != true;
+    final sansFiche = _vue!['fiche'] == null;
+    final texte = absent
+        ? '$qui absent en ${s['matiere']} (${s['debut']} – ${s['fin']}) ? La séance comptera comme non assurée ; les élèves absents restent comptés absents.'
+        : '$qui de nouveau présent en ${s['matiere']} (${s['debut']} – ${s['fin']}) ?';
+    if (!await confirmer(context, absent ? 'Enseignant absent' : 'Enseignant présent',
+        sansFiche ? "$texte\n\nL'appel sera d'abord enregistré, avec les absences déjà cochées." : texte,
+        action: absent ? 'Marquer absent' : 'Remettre présent')) {
+      return;
+    }
+    Map? seance = s;
+    if (sansFiche) {
+      final vue = await _enregistrerAppel(demander: false);
+      if (vue == null) return;
+      seance = (vue['seances'] as List).cast<Map>().where((x) => x['creneauId'] == s['creneauId']).firstOrNull;
+    }
+    if (seance == null || seance['id'] == null || !mounted) return;
+    Map? resultat;
+    final ok = await agir(
+      context,
+      () async => resultat = await Api.i.put('/appel/seances/${seance!['id']}', {
+        'debut': seance['debut'],
+        'fin': seance['fin'],
+        'remplacantId': null,
+        'enseignantAbsent': absent,
+        'annulee': false,
+        'motif': seance['motif'],
+      }) as Map,
+      succes: absent ? '$qui marqué absent.' : '$qui de nouveau présent.',
+    );
+    if (ok && resultat != null && mounted) {
+      setState(() => _recevoir(resultat!));
+      _garder();
+    }
   }
 
   Future<void> _formulaireSeance(Map? s) async {
@@ -435,7 +492,7 @@ class _EcranAppelState extends State<EcranAppel> {
     final seances = (vue['seances'] as List).cast<Map>();
     final eleves = (vue['eleves'] as List).cast<Map>();
     final courante = seances.where((s) => _colonne(s) == _seance).firstOrNull;
-    final dimanche = vue['jour'] == 7;
+    final dimanche = (vue['jour'] as int) >= 6; // week-end : pas de cours
     final barre = sg && !dimanche && (seances.isNotEmpty || vue['fiche'] != null);
     return Stack(children: [
       RefreshIndicator(
@@ -448,7 +505,7 @@ class _EcranAppelState extends State<EcranAppel> {
               sliver: SliverList.list(children: [
                 _choix(context, classes, classeId),
                 const SizedBox(height: 12),
-                if (dimanche) const Carte(enfant: Vide('Dimanche', texte: "Il n'y a pas cours le dimanche.")) else _entete(context, vue, sg),
+                if (dimanche) const Carte(enfant: Vide('Week-end', texte: "Les cours ont lieu du lundi au vendredi : pas d'appel le samedi ni le dimanche.")) else _entete(context, vue, sg),
                 const SizedBox(height: 12),
                 if (!dimanche && seances.isNotEmpty) ...[
                   Row(children: [
@@ -520,7 +577,7 @@ class _EcranAppelState extends State<EcranAppel> {
   }
 
   Widget _choix(BuildContext context, List<Map<String, dynamic>> classes, String classeId) {
-    final auj = _iso(DateTime.now()) == _iso(_date);
+    final auj = _iso(_jourDeCours(DateTime.now(), -1)) == _iso(_date);
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -537,7 +594,7 @@ class _EcranAppelState extends State<EcranAppel> {
             IconButton(
               tooltip: 'Jour précédent',
               icon: const Icon(Icons.chevron_left),
-              onPressed: () => _changer(date: _date.subtract(const Duration(days: 1))),
+              onPressed: () => _changer(date: _jourDeCours(_date.subtract(const Duration(days: 1)), -1)),
             ),
             Expanded(
               child: OutlinedButton.icon(
@@ -552,9 +609,9 @@ class _EcranAppelState extends State<EcranAppel> {
             IconButton(
               tooltip: 'Jour suivant',
               icon: const Icon(Icons.chevron_right),
-              onPressed: auj ? null : () => _changer(date: _date.add(const Duration(days: 1))),
+              onPressed: _jourDeCours(_date.add(const Duration(days: 1)), 1).isAfter(DateTime.now()) ? null : () => _changer(date: _jourDeCours(_date.add(const Duration(days: 1)), 1)),
             ),
-            TextButton(onPressed: auj ? null : () => _changer(date: DateTime.now()), child: const Text("Aujourd'hui")),
+            TextButton(onPressed: auj ? null : () => _changer(date: _jourDeCours(DateTime.now(), -1)), child: const Text("Aujourd'hui")),
           ]),
           if (_etats.isNotEmpty)
             Padding(
@@ -634,7 +691,10 @@ class _EcranAppelState extends State<EcranAppel> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         SizedBox(
           height: 76 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.6),
-          child: ListView.separated(
+          // Une flèche au bord tant que des séances sont cachées à droite (ou à gauche).
+          child: _AvecFleches(
+            construire: (controleur) => ListView.separated(
+            controller: controleur,
             scrollDirection: Axis.horizontal,
             itemCount: seances.length,
             separatorBuilder: (_, _) => const SizedBox(width: 8),
@@ -660,13 +720,16 @@ class _EcranAppelState extends State<EcranAppel> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(color: texte, fontWeight: FontWeight.w600, decoration: annulee ? TextDecoration.lineThrough : null)),
-                      Text(annulee ? 'Annulée' : (s['enseignantAbsent'] == true ? 'Enseignant absent · $n abs.' : '$n absent${n > 1 ? 's' : ''}'),
+                      Text(annulee ? 'Annulée' : (s['enseignantAbsent'] == true ? 'Ens. absent · $n abs.' : '$n absent${n > 1 ? 's' : ''}'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(color: texte, fontSize: 12)),
                     ]),
                   ),
                 ),
               );
             },
+          ),
           ),
         ),
         const SizedBox(height: 6),
@@ -678,7 +741,11 @@ class _EcranAppelState extends State<EcranAppel> {
               padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
               child: Row(children: [
                 Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  // Le SG marque l'enseignant absent (ou présent) en touchant la matière ou l'enseignant.
+                  child: InkWell(
+                    onTap: sg ? () => _basculerEnseignant(courante) : null,
+                    borderRadius: BorderRadius.circular(6),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text('${courante['matiere']}, ${courante['debut']} – ${courante['fin']} (${duree(courante['duree'] as int)})',
                         maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
                     Text(
@@ -692,6 +759,7 @@ class _EcranAppelState extends State<EcranAppel> {
                       style: TextStyle(color: c.encre2, fontSize: 12.5),
                     ),
                   ]),
+                  ),
                 ),
                 if (sg)
                   PopupMenuButton<String>(
@@ -734,6 +802,7 @@ class _EcranAppelState extends State<EcranAppel> {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text.rich(TextSpan(children: [
+                  TextSpan(text: '${e['numero']}. ', style: TextStyle(color: c.encre2, fontWeight: FontWeight.w700)),
                   TextSpan(text: '${e['nom']} ', style: const TextStyle(fontWeight: FontWeight.w600)),
                   TextSpan(text: '${e['prenoms']}', style: TextStyle(color: c.encre2)),
                 ])),
@@ -816,4 +885,86 @@ class _EnteteSeances extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(_EnteteSeances ancien) => true;
+}
+
+/// Liste horizontale avec une flèche au bord tant que des éléments sont cachés à droite (ou à gauche) :
+/// elle signale qu'il faut faire défiler, et la toucher le fait.
+class _AvecFleches extends StatefulWidget {
+  const _AvecFleches({required this.construire});
+  final Widget Function(ScrollController controleur) construire;
+
+  @override
+  State<_AvecFleches> createState() => _AvecFlechesState();
+}
+
+class _AvecFlechesState extends State<_AvecFleches> {
+  final _controleur = ScrollController();
+  bool _gauche = false;
+  bool _droite = false;
+
+  void _maj() {
+    if (!_controleur.hasClients) return;
+    final p = _controleur.position;
+    final g = p.pixels > 4;
+    final d = p.pixels < p.maxScrollExtent - 4;
+    if (g != _gauche || d != _droite) {
+      setState(() {
+        _gauche = g;
+        _droite = d;
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _controleur.addListener(_maj);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maj());
+  }
+
+  @override
+  void dispose() {
+    _controleur.dispose();
+    super.dispose();
+  }
+
+  Widget _fleche(IconData icone, double sens, String aide) {
+    final primaire = Theme.of(context).colorScheme.primary;
+    return Center(
+      child: Material(
+        color: primaire,
+        shape: const CircleBorder(),
+        elevation: 3,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () {
+            final p = _controleur.position;
+            _controleur.animateTo((p.pixels + sens * 220).clamp(0, p.maxScrollExtent), duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+          },
+          child: Tooltip(
+            message: aide,
+            child: Padding(
+              padding: const EdgeInsets.all(3),
+              child: Icon(icone, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0C1826) : Colors.white, size: 18),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return NotificationListener<ScrollMetricsNotification>(
+      onNotification: (_) {
+        _maj();
+        return false;
+      },
+      child: Stack(children: [
+        Positioned.fill(child: widget.construire(_controleur)),
+        if (_gauche) Positioned(left: 0, top: 0, bottom: 0, child: _fleche(Icons.chevron_left, -1, 'Séances à gauche')),
+        if (_droite) Positioned(right: 0, top: 0, bottom: 0, child: _fleche(Icons.chevron_right, 1, 'Autres séances à droite')),
+      ]),
+    );
+  }
 }
