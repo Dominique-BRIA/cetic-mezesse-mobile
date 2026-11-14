@@ -367,14 +367,17 @@ class _EcranEmploiDuTempsState extends State<EcranEmploiDuTemps> {
                         changer: (v) => setState(() => _versionId = v),
                       ),
                     ],
-                    if (sg)
-                      Wrap(spacing: 8, children: [
+                    Wrap(spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                        // L'emploi du temps affiché (classe et version), en tableau : Excel ou PDF.
+                        MenuExporter(
+                            chemin: '/emplois-du-temps/export?classeId=$classeId${version == null ? '' : '&versionId=${version['id']}'}'),
+                        if (sg)
                         TextButton.icon(
                           icon: const Icon(Icons.edit_calendar_outlined, size: 18),
                           label: const Text('Nouvelle version'),
                           onPressed: () => _nouvelleVersion(classeId, vue),
                         ),
-                        if (version != null && versions.length > 1)
+                        if (sg && version != null && versions.length > 1)
                           TextButton.icon(
                             style: TextButton.styleFrom(foregroundColor: c.danger),
                             icon: const Icon(Icons.delete_outline, size: 18),

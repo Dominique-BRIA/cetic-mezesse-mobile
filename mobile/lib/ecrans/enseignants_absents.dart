@@ -84,6 +84,9 @@ class _EcranEnseignantsAbsentsState extends State<EcranEnseignantsAbsents> {
                   options: [('', 'Tous les enseignants'), for (final e in _enseignants ?? const <Map>[]) (e['id'] as String, '${e['nom']} ${e['prenom']}')],
                   changer: (v) => setState(() => _enseignant = v == null || v.isEmpty ? null : v),
                 ),
+                // Mêmes filtres : classeur Excel ou PDF à imprimer.
+                if (seances.isNotEmpty)
+                  Align(alignment: Alignment.centerRight, child: MenuExporter(chemin: '/absences/enseignants/export?${Uri(queryParameters: p).query}')),
               ]),
             ),
           ),

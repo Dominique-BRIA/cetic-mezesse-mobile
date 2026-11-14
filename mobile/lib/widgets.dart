@@ -489,3 +489,27 @@ class _ChampMotDePasseState extends State<ChampMotDePasse> {
         ),
       );
 }
+
+/// Menu « Exporter » (Excel ou PDF) : ouvre le document reçu à l'adresse donnée, complétée par « format=… ».
+class MenuExporter extends StatelessWidget {
+  const MenuExporter({super.key, required this.chemin});
+  final String chemin;
+
+  @override
+  Widget build(BuildContext context) {
+    final couleur = Theme.of(context).colorScheme.primary;
+    return PopupMenuButton<String>(
+      tooltip: 'Exporter',
+      onSelected: (format) => agir(context, () => Api.i.ouvrirDocument('$chemin${chemin.contains('?') ? '&' : '?'}format=$format')),
+      itemBuilder: (_) => const [PopupMenuItem(value: 'xlsx', child: Text('Excel')), PopupMenuItem(value: 'pdf', child: Text('PDF'))],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.download, size: 18, color: couleur),
+          const SizedBox(width: 4),
+          Text('Exporter', style: TextStyle(fontWeight: FontWeight.w600, color: couleur)),
+        ]),
+      ),
+    );
+  }
+}
