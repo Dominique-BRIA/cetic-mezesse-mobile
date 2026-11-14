@@ -640,8 +640,16 @@ class _EcranAppelState extends State<EcranAppel> {
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('${vue['classe']}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-          Text(_dateLongue(vue['date'] as String, vue['jour'] as int), style: TextStyle(color: c.encre2)),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('${vue['classe']}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                Text(_dateLongue(vue['date'] as String, vue['jour'] as int), style: TextStyle(color: c.encre2)),
+              ]),
+            ),
+            // La feuille enregistrée de ce jour, ou vide à remplir à la main : PDF ou Excel.
+            if ((vue['eleves'] as List).isNotEmpty) MenuExporter(chemin: '/appel/export?classeId=${vue['classeId']}&date=${vue['date']}'),
+          ]),
           const SizedBox(height: 6),
           if (fiche != null)
             Text(

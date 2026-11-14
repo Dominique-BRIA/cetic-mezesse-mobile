@@ -175,10 +175,9 @@ class _EcranClassesState extends State<EcranClasses> {
                 onPressed: () => _formulaire(null, classes), icon: const Icon(Icons.add), label: const Text('Nouvelle classe'))
             : null,
         body: Defilement(rafraichir: recharger, enfants: [
-          if (Etat.i.estSG)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
+          Row(children: [
+            if (Etat.i.estSG)
+              OutlinedButton.icon(
                 icon: const Icon(Icons.sell_outlined, size: 18),
                 label: const Text('Spécialités'),
                 onPressed: () async {
@@ -186,7 +185,9 @@ class _EcranClassesState extends State<EcranClasses> {
                   setState(() => _version++);
                 },
               ),
-            ),
+            const Spacer(),
+            if (classes.isNotEmpty) MenuExporterTableau(tableau: () => _tableauClasses(classes)),
+          ]),
           if (classes.isEmpty) const Carte(enfant: Vide('Aucune classe', texte: 'Créez les spécialités, puis les classes et leurs groupes de matières.')),
           // Rangées par niveau : un titre par niveau, puis ses classes.
           for (final (niveau, groupe) in _parNiveau(classes))
@@ -239,6 +240,38 @@ class _EcranClassesState extends State<EcranClasses> {
       ),
     );
   }
+}
+
+/// Toutes les classes, rangées par niveau comme à l'écran, avec le total de l'établissement.
+Map<String, Object?> _tableauClasses(List<Map<String, dynamic>> classes) {
+  int eleves(List<Map> l) => l.fold(0, (n, c) => n + (c['_count']['inscriptions'] as int));
+  return {
+    'titre': 'Classes',
+    'sousTitre': '${classes.length} classes',
+    'colonnes': [
+      {'titre': 'Classe', 'largeur': 2, 'gras': true},
+      {'titre': 'Spécialité', 'largeur': 2},
+      {'titre': 'Élèves', 'largeur': 0.7, 'align': 'droite'},
+      {'titre': 'Matières', 'largeur': 0.7, 'align': 'droite'},
+      {'titre': 'Prof. principal', 'largeur': 2},
+    ],
+    'lignes': [
+      for (final (niveau, groupe) in _parNiveau(classes)) ...[
+        {'groupe': '${niveau == 1 ? '1re' : '${niveau}e'} année · ${groupe.length} classe${groupe.length > 1 ? 's' : ''} · ${eleves(groupe)} élèves'},
+        for (final c in groupe)
+          {
+            'c': [
+              c['nom'],
+              c['specialite']?['nom'],
+              c['_count']['inscriptions'],
+              c['_count']['matieres'],
+              c['profPrincipal'] == null ? '' : '${c['profPrincipal']['prenom']} ${c['profPrincipal']['nom']}',
+            ],
+          },
+      ],
+      {'c': ['Établissement', '', eleves(classes), '', ''], 'gras': true},
+    ],
+  };
 }
 
 // ---------------- Spécialités ----------------
@@ -373,6 +406,29 @@ class _EcranGroupesState extends State<EcranGroupes> {
         body: Defilement(rafraichir: recharger, enfants: [
           const EnTete(titre: 'Groupes de matières', description: 'Ils structurent le bulletin : sous-totaux et moyennes par groupe.'),
           if (groupes.isEmpty) const Carte(enfant: Vide('Aucun groupe')),
+          if (groupes.isNotEmpty)
+            Align(
+              alignment: Alignment.centerRight,
+              child: MenuExporterTableau(
+                tableau: () => {
+                  'titre': 'Groupes de matières',
+                  'sousTitre': '${groupes.length} groupes',
+                  'colonnes': [
+                    {'titre': 'Ordre', 'largeur': 0.5, 'align': 'droite'},
+                    {'titre': 'Groupe', 'largeur': 2, 'gras': true},
+                    {'titre': 'En anglais', 'largeur': 1.8},
+                    {'titre': 'Classes', 'largeur': 4},
+                    {'titre': 'Matières', 'largeur': 0.7, 'align': 'droite'},
+                  ],
+                  'lignes': [
+                    for (final g in groupes.cast<Map>())
+                      {
+                        'c': [g['ordre'], g['nom'], g['nomEn'], (g['classes'] as List).map((c) => c['nom']).join(', '), g['_count']['matieres']],
+                      },
+                  ],
+                },
+              ),
+            ),
           for (final g in groupes.cast<Map>())
             Carte(
               titre: '${g['ordre']}. ${g['nom']}',
@@ -529,7 +585,41 @@ class _EcranMatieresState extends State<EcranMatieres> {
                         : null,
                     body: Defilement(rafraichir: recharger, enfants: [
                       if (matieres.isEmpty) const Carte(enfant: Vide('Aucune matière dans cette classe')),
-                      if (matieres.isNotEmpty) Text('  ${matieres.length} matières · total des coefficients : $total', style: TextStyle(color: context.c.encre2)),
+                      if (matieres.isNotEmpty)
+                        Row(children: [
+                          Expanded(child: Text('  ${matieres.length} matières · total des coefficients : $total', style: TextStyle(color: context.c.encre2))),
+                          MenuExporterTableau(
+                            tableau: () => {
+                              'titre': 'Matières · ${classes.firstWhere((c) => c['id'] == classeId)['nom']}',
+                              'sousTitre': '${matieres.length} matières',
+                              'colonnes': [
+                                {'titre': 'Ordre', 'largeur': 0.5, 'align': 'droite'},
+                                {'titre': 'Matière', 'largeur': 2.2, 'gras': true},
+                                {'titre': 'En anglais', 'largeur': 2},
+                                {'titre': 'Coef', 'largeur': 0.5, 'align': 'droite'},
+                                {'titre': 'Enseignant', 'largeur': 2},
+                                {'titre': 'Notes', 'largeur': 0.6, 'align': 'droite'},
+                              ],
+                              'lignes': [
+                                for (final MapEntry(key: groupe, value: liste) in parGroupe.entries) ...[
+                                  {'groupe': '$groupe · coef ${liste.fold<int>(0, (s, m) => s + (m['coefficient'] as int))}'},
+                                  for (final m in liste)
+                                    {
+                                      'c': [
+                                        m['ordre'],
+                                        m['nom'],
+                                        m['nomEn'],
+                                        m['coefficient'],
+                                        m['professeur'] == null ? 'Non attribuée' : '${m['professeur']['prenom']} ${m['professeur']['nom']}',
+                                        m['_count']?['notes'],
+                                      ],
+                                    },
+                                ],
+                                {'c': ['', 'Total des coefficients', '', total, '', ''], 'gras': true},
+                              ],
+                            },
+                          ),
+                        ]),
                       for (final MapEntry(key: groupe, value: liste) in parGroupe.entries)
                         Carte(
                           titre: '$groupe · coef ${liste.fold<int>(0, (s, m) => s + (m['coefficient'] as int))}',
@@ -632,6 +722,8 @@ class _EcranEnseignantsState extends State<EcranEnseignants> {
         key: ValueKey(_version),
         charger: () async => await Api.i.get('/utilisateurs?role=PROFESSEUR') as List,
         construire: (context, profs, recharger) => Defilement(rafraichir: recharger, enfants: [
+          if (profs.isNotEmpty)
+            Align(alignment: Alignment.centerRight, child: MenuExporterTableau(tableau: () => _tableauEnseignants(profs.cast<Map>()))),
           for (final p in profs.cast<Map>())
             Carte(
               titre: '${p['nom']} ${p['prenom']}',
@@ -678,4 +770,43 @@ class _EcranEnseignantsState extends State<EcranEnseignants> {
       ),
     );
   }
+}
+
+/// Les enseignants affichés, avec leurs matières dans une seule case.
+Map<String, Object?> _tableauEnseignants(List<Map> profs) {
+  String etat(Map p) => p['fusionneDansId'] != null
+      ? 'Fusionné'
+      : p['actif'] != true
+          ? 'Désactivé'
+          : p['doitChangerMotDePasse'] == true
+              ? 'Mot de passe provisoire'
+              : 'Actif';
+  return {
+    'titre': 'Enseignants',
+    'sousTitre': '${profs.length} enseignant(s)',
+    'colonnes': [
+      {'titre': 'Enseignant', 'largeur': 1.8, 'gras': true},
+      {'titre': 'Grade · discipline', 'largeur': 1.6},
+      {'titre': 'Téléphone', 'largeur': 1},
+      {'titre': 'E-mail', 'largeur': 1.6},
+      {'titre': 'Matières enseignées', 'largeur': 3.6},
+      {'titre': 'Prof. principal', 'largeur': 1.4},
+      {'titre': 'État', 'largeur': 1},
+    ],
+    'lignes': [
+      for (final p in profs)
+        {
+          'c': [
+            '${p['nom']} ${p['prenom']}',
+            [p['grade'], p['discipline']].whereType<String>().join(' · '),
+            p['telephone'],
+            p['email'],
+            (p['matieres'] as List).map((m) => '${m['nom']} (${m['classe']['nom']})').join(' ; '),
+            ((p['classesPrincipales'] as List?) ?? []).map((c) => c['nom']).join(', '),
+            etat(p),
+          ],
+        },
+    ],
+    'paysage': true,
+  };
 }

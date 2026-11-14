@@ -513,3 +513,39 @@ class MenuExporter extends StatelessWidget {
     );
   }
 }
+
+/// Envoie un tableau affiché à l'export générique du serveur et ouvre le fichier reçu (« pdf » ou « xlsx »).
+Future<bool> exporterTableau(BuildContext context, Map<String, Object?> t, String format) {
+  final lignes = [
+    for (final l in (t['lignes'] as List).cast<Map>())
+      l.containsKey('groupe') ? l : {...l, 'c': [for (final v in (l['c'] as List)) v == null ? '' : '$v']},
+  ];
+  return agir(context, () => Api.i.ouvrirDocument('/documents/tableau', methode: 'POST', corps: {...t, 'lignes': lignes, 'format': format}));
+}
+
+/// Menu « Exporter » (Excel ou PDF) d'un tableau affiché : la page fournit ses colonnes et ses lignes, filtres compris
+/// (voir l'export générique du serveur, /documents/tableau).
+class MenuExporterTableau extends StatelessWidget {
+  const MenuExporterTableau({super.key, required this.tableau});
+
+  /// { titre, sousTitre?, colonnes: [{titre, largeur?, align?, gras?}], lignes: [{c: [...]} | {groupe}], paysage?, signature?, fichier? }
+  final Map<String, Object?> Function() tableau;
+
+  @override
+  Widget build(BuildContext context) {
+    final couleur = Theme.of(context).colorScheme.primary;
+    return PopupMenuButton<String>(
+      tooltip: 'Exporter',
+      onSelected: (format) => exporterTableau(context, tableau(), format),
+      itemBuilder: (_) => const [PopupMenuItem(value: 'xlsx', child: Text('Excel')), PopupMenuItem(value: 'pdf', child: Text('PDF'))],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.download, size: 18, color: couleur),
+          const SizedBox(width: 4),
+          Text('Exporter', style: TextStyle(fontWeight: FontWeight.w600, color: couleur)),
+        ]),
+      ),
+    );
+  }
+}

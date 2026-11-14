@@ -10,7 +10,7 @@ import '../etat.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import 'bilan_absences.dart' show SanctionEleve;
+import 'bilan_absences.dart' show SanctionEleve, texteSanction;
 import 'saisie_eleves.dart';
 import 'verification.dart';
 
@@ -26,6 +26,58 @@ class _EcranElevesState extends State<EcranEleves> {
   int _version = 0;
   Map<String, Map> _sanctions = {};
   String _sanction = ''; // filtre par sanction (absences non justifiées de l'année)
+  List<Map> _affiches = []; // la liste affichée, pour l'export
+
+  static const _libellesSanction = {
+    'AVEC': 'avec une sanction',
+    'AVERTISSEMENT': 'avertissement conduite',
+    'BLAME': 'blâme conduite',
+    'EXCLUSION': 'exclusion',
+    'A_DECIDER': 'exclusion à décider',
+  };
+
+  /// La liste affichée, filtres compris (classe, sanction, recherche).
+  Map<String, Object?> _tableau(List<Map<String, dynamic>> classes) {
+    final classe = classes.where((c) => c['id'] == _classe).map((c) => c['nom'] as String).firstOrNull;
+    final n = _affiches.length;
+    return {
+      'titre': classe == null ? 'Élèves' : 'Élèves · $classe',
+      'sousTitre': [
+        '$n élève${n > 1 ? 's' : ''}',
+        if (_sanction.isNotEmpty) 'Sanction : ${_libellesSanction[_sanction]}',
+        if (_recherche.isNotEmpty) 'Recherche : « $_recherche »',
+      ].join(' · '),
+      'colonnes': [
+        {'titre': 'N°', 'largeur': 0.4, 'align': 'droite'},
+        {'titre': 'Matricule', 'largeur': 1},
+        {'titre': 'Nom et prénoms', 'largeur': 2.6, 'gras': true},
+        {'titre': 'Sexe', 'largeur': 0.4, 'align': 'centre'},
+        {'titre': 'Né(e) le', 'largeur': 0.9},
+        {'titre': 'Classe', 'largeur': 1.5},
+        {'titre': 'Mat. national', 'largeur': 1},
+        {'titre': 'Redoublant', 'largeur': 0.7},
+        {'titre': 'Sanction', 'largeur': 1.8},
+      ],
+      'lignes': [
+        for (final i in _affiches)
+          {
+            'c': [
+              i['numero'],
+              i['eleve']['matricule'],
+              '${i['eleve']['nom']} ${i['eleve']['prenoms']}',
+              i['eleve']['sexe'],
+              date(i['eleve']['dateNaissance'] as String?),
+              i['classe']['nom'],
+              i['eleve']['matriculeNational'],
+              i['redoublant'] == true ? 'Oui' : 'Non',
+              texteSanction(_sanctions[i['id']]),
+            ],
+          },
+      ],
+      'paysage': true,
+      'fichier': classe == null ? 'eleves' : 'eleves-$classe',
+    };
+  }
 
   bool _retenu(Map i) {
     if (_sanction.isEmpty) return true;
@@ -90,7 +142,8 @@ class _EcranElevesState extends State<EcranEleves> {
                     ),
                     ...[
                       const SizedBox(height: 8),
-                      Wrap(spacing: 8, children: [
+                      Wrap(spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                        MenuExporterTableau(tableau: () => _tableau(classes)),
                         OutlinedButton.icon(
                           icon: const Icon(Icons.photo_camera_outlined, size: 18),
                           label: const Text('Photos'),
@@ -100,18 +153,13 @@ class _EcranElevesState extends State<EcranEleves> {
                             if (ok == true) setState(() => _version++);
                           },
                         ),
-                        if (_classe.isNotEmpty) ...[
+                        // Liste officielle de la classe (naissance, contact des parents), comme dans Classes.
+                        if (_classe.isNotEmpty)
                           OutlinedButton.icon(
                             icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-                            label: const Text('Liste PDF'),
+                            label: const Text('Liste de classe'),
                             onPressed: () => agir(context, () => Api.i.ouvrirDocument('/documents/liste?classeId=$_classe&format=pdf')),
                           ),
-                          OutlinedButton.icon(
-                            icon: const Icon(Icons.table_chart_outlined, size: 18),
-                            label: const Text('Excel'),
-                            onPressed: () => agir(context, () => Api.i.ouvrirDocument('/documents/liste?classeId=$_classe&format=xlsx')),
-                          ),
-                        ],
                         if (Etat.i.estSG)
                           OutlinedButton.icon(
                             icon: const Icon(Icons.upload_file, size: 18),
@@ -139,6 +187,7 @@ class _EcranElevesState extends State<EcranEleves> {
                 },
                 construire: (context, tous, recharger) {
                   final eleves = tous.cast<Map>().where(_retenu).toList();
+                  _affiches = eleves;
                   return Defilement(
                   rafraichir: recharger,
                   enfants: [
@@ -637,6 +686,21 @@ class _FormEleveState extends State<FormEleve> {
   }
 }
 
+/// Un élève renvoyé, en ligne d'export : nom, matricule, classe, date, motif, auteur de la décision.
+Map<String, Object?> _ligneRenvoi(Map i) {
+  final r = (i['renvois'] as List).isEmpty ? null : (i['renvois'] as List).first as Map;
+  return {
+    'c': [
+      '${i['eleve']['nom']} ${i['eleve']['prenoms']}',
+      i['eleve']['matricule'],
+      i['classe']['nom'],
+      date(r?['date'] as String?),
+      r?['motif'],
+      r == null ? '' : '${r['par']['prenom']} ${r['par']['nom']}',
+    ],
+  };
+}
+
 class EcranRenvoyes extends StatefulWidget {
   const EcranRenvoyes({super.key});
   @override
@@ -652,6 +716,28 @@ class _EcranRenvoyesState extends State<EcranRenvoyes> {
       charger: () async => await Api.i.get('/eleves?statut=RENVOYE') as List,
       construire: (context, liste, recharger) => Defilement(rafraichir: recharger, enfants: [
         if (liste.isEmpty) const Carte(enfant: Vide('Aucun élève renvoyé cette année')),
+        if (liste.isNotEmpty)
+          Align(
+            alignment: Alignment.centerRight,
+            child: MenuExporterTableau(
+              tableau: () => {
+                'titre': 'Élèves renvoyés',
+                'sousTitre': '${liste.length} élève(s)',
+                'colonnes': [
+                  {'titre': 'Élève', 'largeur': 2.2, 'gras': true},
+                  {'titre': 'Matricule', 'largeur': 1},
+                  {'titre': 'Classe', 'largeur': 1.5},
+                  {'titre': 'Renvoyé le', 'largeur': 0.9},
+                  {'titre': 'Motif', 'largeur': 2.6},
+                  {'titre': 'Décidé par', 'largeur': 1.4},
+                ],
+                'lignes': [
+                  for (final i in liste.cast<Map>()) _ligneRenvoi(i),
+                ],
+                'signature': 'Le Directeur',
+              },
+            ),
+          ),
         for (final i in liste.cast<Map>())
           Builder(builder: (context) {
             final r = (i['renvois'] as List).isEmpty ? null : (i['renvois'] as List).first as Map;

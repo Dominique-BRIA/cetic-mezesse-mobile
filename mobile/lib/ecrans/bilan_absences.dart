@@ -281,3 +281,13 @@ Future<bool?> deciderExclusion(BuildContext context, Map e) {
     ),
   );
 }
+
+/// La sanction en texte, pour les exports : comme à l'écran, avec l'exclusion encore à décider.
+String texteSanction(Map? e) {
+  if (e == null) return '';
+  var s = (e['libelleSanction'] as String?) ?? '';
+  final j = (e['joursExclusion'] as num?)?.toInt() ?? 0;
+  if (s == 'Exclusion temporaire' && j > 0) s += ' · $j jour${j > 1 ? 's' : ''}';
+  if (e['palierExclusion'] == true && e['decision'] == null) s += '${s.isEmpty ? '' : ' · '}exclusion à décider';
+  return s;
+}

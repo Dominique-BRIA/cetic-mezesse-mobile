@@ -34,6 +34,7 @@ class _EcranNotesState extends State<EcranNotes> {
   String? _classe;
   String _periode = 'S1';
   bool _manquantes = false;
+  Map? _releve; // le relevé affiché, pour le PDF
 
   @override
   Widget build(BuildContext context) {
@@ -69,10 +70,21 @@ class _EcranNotesState extends State<EcranNotes> {
                   onSelectionChanged: (s) => setState(() => _manquantes = s.first),
                 ),
               ),
-              IconButton(
-                tooltip: 'Exporter en Excel',
-                icon: const Icon(Icons.table_chart_outlined),
-                onPressed: () => agir(context, () => Api.i.ouvrirDocument('/documents/releve?classeId=$classeId&periode=$_periode')),
+              // Excel : le relevé du serveur ; PDF : le relevé affiché, en paysage.
+              PopupMenuButton<String>(
+                tooltip: 'Exporter',
+                icon: const Icon(Icons.download),
+                onSelected: (f) {
+                  if (f == 'xlsx') {
+                    agir(context, () => Api.i.ouvrirDocument('/documents/releve?classeId=$classeId&periode=$_periode'));
+                  } else if (_releve != null) {
+                    exporterTableau(context, _tableauReleve(_releve!, _periode), 'pdf');
+                  }
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: 'xlsx', child: Text('Excel')),
+                  PopupMenuItem(value: 'pdf', enabled: !_manquantes, child: const Text('PDF')),
+                ],
               ),
             ]),
           ]),
@@ -89,13 +101,54 @@ class _EcranNotesState extends State<EcranNotes> {
                 : Charge<Map>(
                     key: ValueKey('r|$classeId|$_periode'),
                     charger: () async => await Api.i.get('/notes/classe?classeId=$classeId&periode=$_periode') as Map,
-                    construire: (context, r, recharger) => _Releve(r, recharger),
+                    construire: (context, r, recharger) {
+                      _releve = r;
+                      return _Releve(r, recharger);
+                    },
                   ),
           ),
         ]);
       },
     );
   }
+}
+
+/// Le relevé de la classe, une colonne par matière : par rang, puis la moyenne de classe.
+Map<String, Object?> _tableauReleve(Map r, String periode) {
+  final matieres = (r['matieres'] as List).cast<Map>();
+  final eleves = (r['eleves'] as List).cast<Map>().toList()
+    ..sort((a, b) => ((a['rang']?['rang'] as int?) ?? 999).compareTo((b['rang']?['rang'] as int?) ?? 999));
+  final profil = r['profil'] as Map;
+  return {
+    'titre': 'Relevé de notes · ${r['classe']['nom']} · ${libellePeriode(periode)}',
+    'sousTitre': 'Année scolaire ${r['classe']['annee']} · moyenne de classe ${note(profil['moyenneGenerale'] as num?)} · réussite ${pourcent(profil['tauxReussite'] as num?)}',
+    'colonnes': [
+      {'titre': 'Rang', 'largeur': 0.6},
+      {'titre': 'N°', 'largeur': 0.4, 'align': 'droite'},
+      {'titre': 'Élève', 'largeur': 3, 'gras': true},
+      for (final m in matieres) {'titre': '${m['nom']} (coef ${m['coefficient']})', 'align': 'droite'},
+      {'titre': 'Moyenne', 'largeur': 1.1, 'align': 'droite', 'gras': true},
+    ],
+    'lignes': [
+      for (final e in eleves)
+        {
+          'c': [
+            rang(e['rang'] as Map?),
+            e['numero'],
+            '${e['nom']} ${e['prenoms']}',
+            for (var i = 0; i < matieres.length; i++) matieres[i]['evaluee'] == true ? note((e['notes'] as List)[i] as num?) : '',
+            note(e['moyenne'] as num?),
+          ],
+        },
+      {
+        'c': ['', '', 'Moyenne de classe', for (final m in matieres) m['evaluee'] == true ? note(m['moyenne'] as num?) : '', note(profil['moyenneGenerale'] as num?)],
+        'gras': true,
+      },
+    ],
+    'paysage': true,
+    'signature': 'Le Directeur',
+    'fichier': 'releve-${r['classe']['nom']}-$periode',
+  };
 }
 
 class _Releve extends StatelessWidget {
@@ -261,7 +314,7 @@ class _EcranStatistiquesState extends State<EcranStatistiques> {
             child: switch (_vue) {
               'etablissement' => _StatsEtablissement(key: ValueKey('e|$_periode'), periode: _periode),
               'classe' when classeId != null => _StatsClasse(key: ValueKey('c|$classeId|$_periode'), classeId: classeId, periode: _periode),
-              'matiere' when _matiere != null => StatsMatiere(key: ValueKey('m|$_matiere|$_periode'), matiereId: _matiere!, periode: _periode),
+              'matiere' when _matiere != null => StatsMatiere(key: ValueKey('m|$_matiere|$_periode'), matiereId: _matiere!, periode: _periode, exportable: true),
               _ => const Defilement(enfants: [Carte(enfant: Vide('Choisissez une matière'))]),
             },
           ),
@@ -285,6 +338,7 @@ class _StatsEtablissement extends StatelessWidget {
         String eleves(List l) => l.isEmpty ? '—' : l.map((e) => '${e['nom']} ${e['prenoms']} (${e['classe']['nom']}, ${note(e['moyenne'] as num?)})').join('\n');
         String classe(Map? c) => c == null ? '—' : '${c['nom']} (${note(c['moyenneGenerale'] as num?)})';
         return Defilement(rafraichir: recharger, enfants: [
+          Align(alignment: Alignment.centerRight, child: MenuExporterTableau(tableau: () => _tableauStatsEtab(s, periode))),
           GrilleIndicateurs(enfants: [
             Indicateur(libelle: 'Moyenne générale', valeur: note(r['moyenne'] as num?), accent: true, detail: '${r['effectif']} élèves'),
             Indicateur(libelle: 'Réussite', valeur: pourcent(r['tauxReussite'] as num?), detail: '${r['reussis']} à 10 ou plus'),
@@ -339,6 +393,7 @@ class _StatsClasse extends StatelessWidget {
         final p = s['profil'] as Map;
         if (p['moyenneGenerale'] == null) return const Defilement(enfants: [Carte(enfant: Vide('Pas encore de notes sur cette période'))]);
         return Defilement(rafraichir: recharger, enfants: [
+          Align(alignment: Alignment.centerRight, child: MenuExporterTableau(tableau: () => _tableauStatsClasse(s, periode))),
           GrilleIndicateurs(enfants: [
             Indicateur(libelle: 'Moyenne', valeur: note(p['moyenneGenerale'] as num?), accent: true, detail: '${p['effectif']} élèves'),
             Indicateur(libelle: 'Réussite', valeur: pourcent(p['tauxReussite'] as num?), detail: '${p['nombreMoyennes']} moyennes'),
@@ -394,6 +449,7 @@ class _EcranClassementState extends State<EcranClassement> {
         final dernierRang = tous.isEmpty ? null : tous.last['rang']['rang'];
         final lignes = tous.where((e) => _classe.isEmpty || e['classe']['id'] == _classe).toList();
         final c = context.c;
+        final nomClasse = (s['classes'] as List).cast<Map>().where((k) => k['id'] == _classe).map((k) => k['nom']).firstOrNull;
         return Column(children: [
           _filtres([
             ChoixPeriode(valeur: _periode, changer: (v) => setState(() => _periode = v)),
@@ -406,6 +462,30 @@ class _EcranClassementState extends State<EcranClassement> {
           ]),
           Expanded(
             child: Defilement(rafraichir: recharger, enfants: [
+              if (lignes.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: MenuExporterTableau(
+                    tableau: () => {
+                      'titre': 'Classement général · ${libellePeriode(_periode)}',
+                      'sousTitre': '${tous.length} élèves classés${nomClasse == null ? '' : ' · Classe : $nomClasse'}',
+                      'colonnes': [
+                        {'titre': 'Rang', 'largeur': 0.7},
+                        {'titre': 'Élève', 'largeur': 3, 'gras': true},
+                        {'titre': 'Matricule', 'largeur': 1.1},
+                        {'titre': 'Classe', 'largeur': 2},
+                        {'titre': 'Rang en classe', 'largeur': 1},
+                        {'titre': 'Moyenne', 'largeur': 0.9, 'align': 'droite', 'gras': true},
+                      ],
+                      'lignes': [
+                        for (final e in lignes)
+                          {'c': [rang(e['rang'] as Map?), '${e['nom']} ${e['prenoms']}', e['matricule'], e['classe']['nom'], rang(e['rangClasse'] as Map?), note(e['moyenne'] as num?)]},
+                      ],
+                      'signature': 'Le Directeur',
+                      'fichier': 'classement-general-$_periode',
+                    },
+                  ),
+                ),
               Carte(
                 titre: '${libellePeriode(_periode)} · ${tous.length} élèves classés',
                 sansMarge: true,
@@ -500,16 +580,47 @@ class _EcranTableauHonneurState extends State<EcranTableauHonneur> {
                                 ),
                               ),
                               const SizedBox(width: 10),
+                              // La même liste en classeur Excel, classe par classe.
                               Expanded(
-                                child: FilledButton.icon(
-                                  icon: const Icon(Icons.military_tech_outlined, size: 18),
-                                  label: const Text('Certificats'),
+                                child: OutlinedButton.icon(
+                                  icon: const Icon(Icons.table_chart_outlined, size: 18),
+                                  label: const Text('Excel'),
                                   onPressed: total == 0
                                       ? null
-                                      : () => agir(context, () => Api.i.ouvrirDocument('/tableau-honneur/pdf?$_filtre&format=certificats')),
+                                      : () => exporterTableau(
+                                            context,
+                                            {
+                                              'titre': "Tableau d'honneur · ${libellePeriode(_periode)}",
+                                              'sousTitre': "${t['annee']} · moyenne d'au moins ${note(t['seuil'] as num?)} · $total élève(s)",
+                                              'colonnes': [
+                                                {'titre': 'Rang', 'largeur': 0.6},
+                                                {'titre': 'Élève', 'largeur': 3, 'gras': true},
+                                                {'titre': 'Matricule', 'largeur': 1.1},
+                                                {'titre': 'Sexe', 'largeur': 0.5},
+                                                {'titre': 'Moyenne', 'largeur': 0.8, 'align': 'droite'},
+                                              ],
+                                              'lignes': [
+                                                for (final k in avecEleves) ...[
+                                                  {'groupe': '${k['nom']} · ${(k['eleves'] as List).length} sur ${k['effectif']}'},
+                                                  for (final e in (k['eleves'] as List).cast<Map>())
+                                                    {'c': [rang(e['rang'] as Map?), '${e['nom']} ${e['prenoms']}', e['matricule'], e['sexe'], note(e['moyenne'] as num?)]},
+                                                ],
+                                              ],
+                                              'fichier': 'tableau-honneur-$_periode',
+                                            },
+                                            'xlsx',
+                                          ),
                                 ),
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 8),
+                          FilledButton.icon(
+                            icon: const Icon(Icons.military_tech_outlined, size: 18),
+                            label: const Text('Certificats'),
+                            onPressed: total == 0
+                                ? null
+                                : () => agir(context, () => Api.i.ouvrirDocument('/tableau-honneur/pdf?$_filtre&format=certificats')),
                           ),
                         ],
                       ),
@@ -546,4 +657,78 @@ class _EcranTableauHonneurState extends State<EcranTableauHonneur> {
       ),
     );
   }
+}
+
+const _colonnesStats = [
+  {'titre': 'Rang', 'largeur': 0.6},
+  {'titre': 'Libellé', 'largeur': 3, 'gras': true},
+  {'titre': 'Effectif', 'largeur': 0.8, 'align': 'droite'},
+  {'titre': 'Moyenne', 'largeur': 0.9, 'align': 'droite'},
+  {'titre': 'Min – Max', 'largeur': 1.2, 'align': 'droite'},
+  {'titre': 'Écart-type · moyennes', 'largeur': 1.1, 'align': 'droite'},
+  {'titre': 'Réussite', 'largeur': 0.9, 'align': 'droite'},
+];
+
+List<Map<String, Object?>> _sexes(List d) => [
+      for (final x in d.cast<Map>())
+        {'c': ['', x['sexe'] == 'F' ? 'Filles' : 'Garçons', x['effectif'], note(x['moyenne'] as num?), '', '', pourcent(x['tauxReussite'] as num?)]},
+    ];
+
+/// Statistiques de l'établissement en tableau (les graphiques deviennent des sections chiffrées).
+Map<String, Object?> _tableauStatsEtab(Map s, String periode) {
+  final r = s['resume'] as Map;
+  String eleve(Map e) => '${e['nom']} ${e['prenoms']} (${e['classe']['nom']})';
+  return {
+    'titre': "Statistiques de l'établissement · ${libellePeriode(periode)}",
+    'sousTitre':
+        'Moyenne générale ${note(r['moyenne'] as num?)} · réussite ${pourcent(r['tauxReussite'] as num?)} (${r['reussis']} sur ${r['effectif']}) · min – max ${note(r['min'] as num?)} – ${note(r['max'] as num?)} · écart-type ${note(r['ecartType'] as num?)}',
+    'colonnes': _colonnesStats,
+    'lignes': [
+      {'groupe': 'Classes'},
+      for (final c in (s['classes'] as List).cast<Map>())
+        {
+          'c': [rang(c['rang'] as Map?), c['nom'], c['effectif'], note(c['moyenneGenerale'] as num?), '${note(c['min'] as num?)} – ${note(c['max'] as num?)}', c['nombreMoyennes'], pourcent(c['tauxReussite'] as num?)],
+        },
+      {'groupe': "Premiers et derniers de l'établissement"},
+      for (final e in (s['premier'] as List).cast<Map>()) {'c': ['Premier', eleve(e), '', note(e['moyenne'] as num?), '', '', '']},
+      for (final e in (s['dernier'] as List).cast<Map>()) {'c': ['Dernier', eleve(e), '', note(e['moyenne'] as num?), '', '', '']},
+      {'groupe': 'Filles et garçons'},
+      ..._sexes(s['parSexe'] as List),
+      {'groupe': 'Répartition des moyennes générales'},
+      for (final t in (s['repartition'] as List).cast<Map>()) {'c': ['', t['tranche'], t['effectif'], '', '', '', '']},
+      {'groupe': 'Moyenne par matière, toutes classes confondues'},
+      for (final m in (s['matieres'] as List).cast<Map>())
+        {'c': ['', '${m['nom']} (${m['classes']} classe${(m['classes'] as int) > 1 ? 's' : ''})', '', note(m['moyenne'] as num?), '', '', pourcent(m['tauxReussite'] as num?)]},
+    ],
+    'fichier': 'statistiques-etablissement-$periode',
+  };
+}
+
+/// Statistiques d'une classe en tableau.
+Map<String, Object?> _tableauStatsClasse(Map s, String periode) {
+  final p = s['profil'] as Map;
+  return {
+    'titre': 'Statistiques · ${s['classe']['nom']} · ${libellePeriode(periode)}',
+    'sousTitre':
+        'Moyenne de la classe ${note(p['moyenneGenerale'] as num?)} · réussite ${pourcent(p['tauxReussite'] as num?)} · min – max ${note(p['min'] as num?)} – ${note(p['max'] as num?)} · écart-type ${note(p['ecartType'] as num?)} · ${p['effectif']} élèves',
+    'colonnes': _colonnesStats,
+    'lignes': [
+      {'groupe': 'Matières (coefficient · enseignant)'},
+      for (final m in (s['matieres'] as List).cast<Map>())
+        {
+          'c': m['evaluee'] == true
+              ? ['', '${m['nom']} (coef ${m['coefficient']}${m['professeur'] == null ? '' : ' · ${m['professeur']}'})', '', note(m['moyenne'] as num?), '${note(m['min'] as num?)} – ${note(m['max'] as num?)}', note(m['ecartType'] as num?), pourcent(m['tauxReussite'] as num?)]
+              : ['', '${m['nom']} (coef ${m['coefficient']})', '', "Pas d'évaluation", '', '', ''],
+        },
+      {'groupe': 'Évolution de la moyenne de classe'},
+      for (final e in (s['evolution'] as List).cast<Map>()) {'c': ['', e['periode'], '', note(e['moyenne'] as num?), '', '', pourcent(e['tauxReussite'] as num?)]},
+      {'groupe': 'Filles et garçons'},
+      ..._sexes(s['parSexe'] as List),
+      {'groupe': 'Répartition des moyennes'},
+      for (final t in (s['repartition'] as List).cast<Map>()) {'c': ['', t['tranche'], t['effectif'], '', '', '', '']},
+      {'groupe': 'Classement de la classe'},
+      for (final e in (s['classement'] as List).cast<Map>()) {'c': [rang(e['rang'] as Map?), '${e['nom']} ${e['prenoms']}', e['sexe'], note(e['moyenne'] as num?), '', '', '']},
+    ],
+    'fichier': 'statistiques-${s['classe']['nom']}-$periode',
+  };
 }

@@ -405,9 +405,12 @@ class _EcranStatsMesMatieresState extends State<EcranStatsMesMatieres> {
 
 /// Statistiques d'une matière (partagé avec l'écran de la direction).
 class StatsMatiere extends StatelessWidget {
-  const StatsMatiere({super.key, required this.matiereId, required this.periode});
+  const StatsMatiere({super.key, required this.matiereId, required this.periode, this.exportable = false});
   final String matiereId;
   final String periode;
+
+  /// Menu d'export (direction seulement : l'export lui est réservé).
+  final bool exportable;
 
   @override
   Widget build(BuildContext context) {
@@ -420,6 +423,37 @@ class StatsMatiere extends StatelessWidget {
         }
         final eleves = (s['eleves'] as List).cast<Map>();
         return Defilement(rafraichir: recharger, enfants: [
+          if (exportable)
+            Align(
+              alignment: Alignment.centerRight,
+              child: MenuExporterTableau(
+                tableau: () => {
+                  'titre': 'Statistiques · ${s['matiere']['nom']} · ${s['matiere']['classe']['nom']} · ${libellePeriode(periode)}',
+                  'sousTitre':
+                      'Coefficient ${s['matiere']['coefficient']} · moyenne ${note(r['moyenne'] as num?)} sur ${r['effectif']} élèves · réussite ${pourcent(r['tauxReussite'] as num?)} · min – max ${note(r['min'] as num?)} – ${note(r['max'] as num?)} · écart-type ${note(r['ecartType'] as num?)}',
+                  'colonnes': [
+                    {'titre': 'Rang', 'largeur': 0.6},
+                    {'titre': 'Élève', 'largeur': 3, 'gras': true},
+                    {'titre': 'Sexe', 'largeur': 0.5, 'align': 'centre'},
+                    {'titre': 'Note', 'largeur': 0.8, 'align': 'droite'},
+                    {'titre': 'Grade', 'largeur': 0.7, 'align': 'centre'},
+                  ],
+                  'lignes': [
+                    {'groupe': 'Notes des élèves, de la meilleure à la plus faible'},
+                    for (final e in eleves) {'c': [rang(e['rang'] as Map?), '${e['nom']} ${e['prenoms']}', e['sexe'], note(e['note'] as num?), e['grade']]},
+                    {'groupe': 'Grades obtenus'},
+                    for (final g in (s['grades'] as List).cast<Map>())
+                      {'c': ['', g['grade'], '', g['effectif'], pourcent((r['effectif'] as int) == 0 ? null : (g['effectif'] as int) * 100 / (r['effectif'] as int))]},
+                    {'groupe': 'Filles et garçons (effectif · moyenne · réussite)'},
+                    for (final x in (s['parSexe'] as List).cast<Map>())
+                      {'c': ['', x['sexe'] == 'F' ? 'Filles' : 'Garçons', x['effectif'], note(x['moyenne'] as num?), pourcent(x['tauxReussite'] as num?)]},
+                    {'groupe': 'Évolution de la moyenne sur les séquences'},
+                    for (final e in (s['evolution'] as List).cast<Map>()) {'c': ['', e['periode'], '', e['evaluee'] == true ? note(e['moyenne'] as num?) : '', '']},
+                  ],
+                  'fichier': 'statistiques-${s['matiere']['nom']}-${s['matiere']['classe']['nom']}-$periode',
+                },
+              ),
+            ),
           GrilleIndicateurs(enfants: [
             Indicateur(libelle: 'Moyenne', valeur: note(r['moyenne'] as num?), accent: true, detail: 'sur ${r['effectif']} élèves'),
             Indicateur(libelle: 'Réussite', valeur: pourcent(r['tauxReussite'] as num?), detail: '${r['reussis']} à 10 ou plus'),

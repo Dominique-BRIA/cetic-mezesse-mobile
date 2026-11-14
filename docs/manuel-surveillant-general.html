@@ -24,7 +24,7 @@
       <tr><td style="width:40%"><b>Établissement</b></td><td>Collège d'Enseignement Technique Industriel et Commercial de Mezesse</td></tr>
       <tr><td><b>Adresse de l'application</b></td><td>https://ceticmezesse.vercel.app (web) · application Android</td></tr>
       <tr><td><b>Pour commencer</b></td><td>Guide de première utilisation du Surveillant Général</td></tr>
-      <tr><td><b>Version du document</b></td><td>2.4 · Novembre 2026</td></tr>
+      <tr><td><b>Version du document</b></td><td>2.5 · Novembre 2026</td></tr>
     </table>
   </div>
 </section>
@@ -64,6 +64,7 @@
     <li><b>Le menu</b> se divise en Scolarité, Organisation, Évaluations et Administration.</li>
     <li><b>La cloche</b> : vos notifications. <b>Votre nom</b>, en bas du menu : votre profil.</li>
     <li><b>Actualiser</b>, en haut à droite de chaque page : recharge les données affichées.</li>
+    <li><b>Excel</b> et <b>PDF</b>, en haut de la plupart des pages : exportent ce que la page affiche, filtres et tri compris. Le PDF porte l'en-tête officiel du CETIC, avec les filtres sous le titre ; un tableau large passe en paysage. Sur le mobile, c'est le menu <b>Exporter</b>.</li>
   </ul>
 </section>
 
@@ -102,19 +103,19 @@
   <p><b>Nouvelle classe</b> : choisissez le niveau et la spécialité, puis le professeur principal. <b>Le nom se calcule tout seul</b> : niveau, spécialité, puis une lettre A, B… seulement si le niveau et la spécialité comptent plusieurs classes. L'aperçu indique aussi les classes qui seront renommées (par exemple « 1re année Mécanique » qui devient « 1re année Mécanique A »).</p>
   <figure class="duo"><img src="img/manuel/sg-nouvelle-classe.png" alt="Sur le site"><img class="mobile" src="img/mobile/sg-nouvelle-classe.png" alt="Sur l'application mobile"><figcaption>Figure 8 — Nouvelle classe : le nom est calculé · site à gauche, application mobile à droite</figcaption></figure>
   <figure class="duo"><img src="img/manuel/sg-classes.png" alt="Sur le site"><img class="mobile" src="img/mobile/sg-classes.png" alt="Sur l'application mobile"><figcaption>Figure 9 — Les classes de l'année · site à gauche, application mobile à droite</figcaption></figure>
-  <p>Chaque carte de classe donne accès à ses élèves, à ses matières, et à la liste des élèves en PDF ou en Excel. Une classe <b>sans élève</b> peut être supprimée (bouton Supprimer dans sa fenêtre de modification) ; ses matières sont supprimées avec elle et les lettres des autres classes se resserrent.</p>
+  <p>Chaque carte de classe donne accès à ses élèves, à ses matières, et à la liste des élèves en PDF ou en Excel. Les boutons <b>Excel</b> et <b>PDF</b> du haut de la page exportent toutes les classes, rangées par niveau, avec leurs effectifs. Une classe <b>sans élève</b> peut être supprimée (bouton Supprimer dans sa fenêtre de modification) ; ses matières sont supprimées avec elle et les lettres des autres classes se resserrent.</p>
 </section>
 
 <section class="chapitre">
   <h2>6. Groupes de matières</h2>
-  <p>Menu Organisation → <b>Groupes de matières</b>. Un groupe (matières générales, professionnelles, complémentaires…) regroupe les matières sur le bulletin et donne une moyenne de groupe. Il est rattaché aux classes qui l'utilisent, et son <b>ordre</b> fixe sa place sur le bulletin.</p>
+  <p>Menu Organisation → <b>Groupes de matières</b>. Un groupe (matières générales, professionnelles, complémentaires…) regroupe les matières sur le bulletin et donne une moyenne de groupe. Il est rattaché aux classes qui l'utilisent, et son <b>ordre</b> fixe sa place sur le bulletin. <b>Excel</b> et <b>PDF</b> exportent la liste des groupes avec leurs classes.</p>
   <figure class="duo"><img src="img/manuel/sg-groupes.png" alt="Sur le site"><img class="mobile" src="img/mobile/sg-groupes.png" alt="Sur l'application mobile"><figcaption>Figure 10 — Groupes de matières · site à gauche, application mobile à droite</figcaption></figure>
   <div class="encadre attention">On ne peut pas retirer d'un groupe une classe dont des matières sont encore dans ce groupe, ni supprimer un groupe qui contient des matières : déplacez ou supprimez d'abord ces matières.</div>
 </section>
 
 <section class="chapitre">
   <h2>7. Enseignants</h2>
-  <p>Menu Organisation → <b>Enseignants</b>. <b>Nouvel enseignant</b> : nom, prénom, téléphone ou e-mail (au moins l'un des deux, chacun unique), discipline. Le compte reçoit le mot de passe provisoire <code>password</code>, que le professeur change à sa première connexion.</p>
+  <p>Menu Organisation → <b>Enseignants</b>. <b>Nouvel enseignant</b> : nom, prénom, téléphone ou e-mail (au moins l'un des deux, chacun unique), discipline. Le compte reçoit le mot de passe provisoire <code>password</code>, que le professeur change à sa première connexion. <b>Excel</b> et <b>PDF</b> exportent la liste affichée (recherche comprise), avec le contact et les matières de chacun.</p>
   <figure class="duo"><img src="img/manuel/sg-enseignants.png" alt="Sur le site"><img class="mobile" src="img/mobile/sg-enseignants.png" alt="Sur l'application mobile"><figcaption>Figure 11 — Enseignants, avec leurs matières et classes · site à gauche, application mobile à droite</figcaption></figure>
   <ul>
     <li><b>Réinitialiser le mot de passe</b> d'un professeur qui l'a oublié : il redevient <code>password</code>.</li>
@@ -127,7 +128,7 @@
 
 <section class="chapitre">
   <h2>8. Matières</h2>
-  <p>Menu Organisation → <b>Matières</b>. Une matière appartient à une classe et à un groupe rattaché à cette classe. Son <b>coefficient</b> est un entier de 1 à 20 ; son <b>ordre</b> fixe sa place dans le groupe sur le bulletin ; elle a au plus un professeur.</p>
+  <p>Menu Organisation → <b>Matières</b>. Une matière appartient à une classe et à un groupe rattaché à cette classe. Son <b>coefficient</b> est un entier de 1 à 20 ; son <b>ordre</b> fixe sa place dans le groupe sur le bulletin ; elle a au plus un professeur. <b>Excel</b> et <b>PDF</b> exportent les matières de la classe, par groupe, avec le total des coefficients.</p>
   <figure class="duo"><img src="img/manuel/sg-matieres.png" alt="Sur le site"><img class="mobile" src="img/mobile/sg-matieres.png" alt="Sur l'application mobile"><figcaption>Figure 13 — Matières d'une classe · site à gauche, application mobile à droite</figcaption></figure>
   <figure class="duo"><img src="img/manuel/sg-nouvelle-matiere.png" alt="Sur le site"><img class="mobile" src="img/mobile/sg-nouvelle-matiere.png" alt="Sur l'application mobile"><figcaption>Figure 14 — Nouvelle matière · site à gauche, application mobile à droite</figcaption></figure>
   <div class="encadre attention">Supprimer une matière qui a des notes demande une confirmation et efface ses notes. Une matière notée ne peut plus changer de classe.</div>
@@ -135,7 +136,7 @@
 
 <section class="chapitre">
   <h2>9. Élèves</h2>
-  <p>Menu Scolarité → <b>Élèves</b>. La liste montre les élèves inscrits de l'année, par classe, avec une recherche par nom, prénom ou matricule. Les boutons <b>Liste PDF</b> et <b>Excel</b> produisent la liste de la classe choisie. La colonne <b>N°</b> donne le numéro d'ordre de l'élève dans sa classe (1, 2, 3… dans l'ordre alphabétique), le même sur tous les écrans ; la colonne <b>Sanction</b>, sa sanction de l'année pour absences non justifiées. La liste <b>Sanction</b> filtre les élèves (avec une sanction, avertissement, blâme, exclusion, exclusion à décider). Avec « Toutes les classes », la liste est rangée par classe.</p>
+  <p>Menu Scolarité → <b>Élèves</b>. La liste montre les élèves inscrits de l'année, par classe, avec une recherche par nom, prénom ou matricule. Les boutons <b>Excel</b> et <b>PDF</b> exportent la liste affichée, avec les filtres (classe, sanction, recherche) ; <b>Liste de classe</b> donne la liste officielle de la classe choisie (naissance, contact des parents). La colonne <b>N°</b> donne le numéro d'ordre de l'élève dans sa classe (1, 2, 3… dans l'ordre alphabétique), le même sur tous les écrans ; la colonne <b>Sanction</b>, sa sanction de l'année pour absences non justifiées. La liste <b>Sanction</b> filtre les élèves (avec une sanction, avertissement, blâme, exclusion, exclusion à décider). Avec « Toutes les classes », la liste est rangée par classe.</p>
   <figure class="duo"><img src="img/manuel/sg-eleves.png" alt="Sur le site"><img class="mobile" src="img/mobile/sg-eleves.png" alt="Sur l'application mobile"><figcaption>Figure 15 — Les élèves · site à gauche, application mobile à droite</figcaption></figure>
   <h3>Inscrire des élèves</h3>
   <ul>
@@ -165,7 +166,7 @@
 
 <section class="chapitre">
   <h2>11. Notes</h2>
-  <p>Menu Évaluations → <b>Notes</b>. Pour une classe et une période : le relevé des notes, les moyennes et les rangs, avec <b>Exporter en Excel</b>. L'onglet <b>Notes manquantes</b> liste, matière par matière, les élèves sans note et leur professeur : utile avant de fermer une séquence.</p>
+  <p>Menu Évaluations → <b>Notes</b>. Pour une classe et une période : le relevé des notes, les moyennes et les rangs. <b>Excel</b> donne le relevé complet ; <b>PDF</b>, le relevé affiché, une colonne par matière, en paysage. L'onglet <b>Notes manquantes</b> liste, matière par matière, les élèves sans note et leur professeur : utile avant de fermer une séquence.</p>
   <figure class="duo"><img src="img/manuel/sg-notes.png" alt="Sur le site"><img class="mobile" src="img/mobile/sg-notes.png" alt="Sur l'application mobile"><figcaption>Figure 21 — Relevé des notes d'une classe · site à gauche, application mobile à droite</figcaption></figure>
   <div class="encadre">Les notes en rouge sont sous la moyenne. Une note de trimestre est la moyenne des séquences évaluées du trimestre ; la note annuelle, la moyenne des trimestres évalués. Les moyennes sont pondérées par les coefficients.</div>
 </section>
@@ -186,12 +187,13 @@
   <p>Menu Évaluations → <b>Statistiques</b>, pour une période et sur trois onglets : <b>Établissement</b>, <b>Par classe</b>, <b>Par matière</b>. On y trouve la moyenne générale, le taux de réussite, les moyennes extrêmes, l'écart-type, le premier et le dernier élève, la meilleure et la dernière classe, la répartition des moyennes et la comparaison filles–garçons. <b>Classement général</b> : tous les élèves de l'établissement rangés ensemble.</p>
   <figure class="duo"><img src="img/manuel/sg-statistiques.png" alt="Sur le site"><img class="mobile" src="img/mobile/sg-statistiques.png" alt="Sur l'application mobile"><figcaption>Figure 24 — Statistiques de l'établissement · site à gauche, application mobile à droite</figcaption></figure>
   <figure class="duo"><img src="img/manuel/sg-classement.png" alt="Sur le site"><img class="mobile" src="img/mobile/sg-classement.png" alt="Sur l'application mobile"><figcaption>Figure 25 — Classement général · site à gauche, application mobile à droite</figcaption></figure>
+  <p>Chaque onglet des statistiques s'exporte en <b>Excel</b> ou en <b>PDF</b> : les tableaux de la page, et les graphiques sous forme de chiffres (répartition, filles et garçons, évolution). Le classement général s'exporte aussi, avec le filtre de classe et la recherche.</p>
   <div class="encadre">Les rangs se calculent sur les moyennes arrondies au centième ; des élèves ex æquo partagent le rang et le suivant est sauté. Un élève réussit avec une moyenne de 10 ou plus. Un élève renvoyé sort des listes, des calculs et des classements.</div>
   <h3>Tableau d'honneur</h3>
   <p>Menu Évaluations → <b>Tableau d'honneur</b>. Pour une période (séquence, trimestre ou année) et toutes les classes ou une seule, il montre les élèves dont la moyenne atteint la moyenne minimale réglée dans les Paramètres, classe par classe et avec leur rang.</p>
   <figure class="duo"><img src="img/manuel/sg-tableau-honneur.png" alt="Sur le site"><img class="mobile" src="img/mobile/sg-tableau-honneur.png" alt="Sur l'application mobile"><figcaption>Figure 26 — Tableau d'honneur · site à gauche, application mobile à droite</figcaption></figure>
   <ul>
-    <li><b>Liste PDF</b> : la liste à afficher, classe par classe.</li>
+    <li><b>Liste PDF</b> : la liste à afficher, classe par classe ; <b>Excel</b> : la même liste en classeur.</li>
     <li><b>Certificats</b> : un certificat bilingue par élève, deux par page A4. Il porte la moyenne, le rang, la moyenne de la classe et le nom du professeur principal, qui le signe avec le Directeur. Renseignez donc le professeur principal de chaque classe (chapitre 5).</li>
   </ul>
   <p>Le bulletin d'un élève au tableau d'honneur porte la mention «&nbsp;TABLEAU D'HONNEUR / HONOUR&nbsp;ROLL&nbsp;».</p>
@@ -204,7 +206,7 @@
   <p>Menu Organisation → <b>Emploi du temps</b> : la semaine type de chaque classe, en tableau. Ajoutez d'abord les heures (<b>Ajouter une heure</b>), puis la matière de chaque case (le <b>+</b>). Le crayon d'un horaire le change sur toute la ligne. Une <b>Nouvelle version</b> vaut à partir d'une date ; les jours passés gardent l'ancienne. Les boutons <b>Excel</b> et <b>PDF</b> exportent l'emploi du temps affiché ; le PDF, sur une page A4 avec l'en-tête officiel, est prêt à imprimer.</p>
   <figure class="duo"><img src="img/manuel/sg-emploi-du-temps.png" alt="Sur le site"><img class="mobile" src="img/mobile/sg-emploi-du-temps.png" alt="Sur l'application mobile"><figcaption>Figure 27 — L'emploi du temps d'une classe · site à gauche, application mobile à droite</figcaption></figure>
   <h3>L'appel</h3>
-  <p>Menu Absences → <b>Feuille d'appel</b>, la classe et le jour. Tout le monde est présent par défaut : cliquez les cases des absents (un clic sur le nom marque toute la journée). La saisie reste sur l'appareil jusqu'à <b>Enregistrer l'appel</b> ; ensuite, chaque correction est gardée dans l'historique. Un clic sur l'en-tête d'une séance marque l'enseignant absent ; le menu ⋮ de la séance donne Tous absents, Tous présents et Modifier la séance (remplaçant, séance annulée). Pas d'appel le samedi ni le dimanche.</p>
+  <p>Menu Absences → <b>Feuille d'appel</b>, la classe et le jour. <b>PDF</b> et <b>Excel</b> exportent la feuille enregistrée ; une feuille pas encore faite sort vide, à remplir à la main en classe. Tout le monde est présent par défaut : cliquez les cases des absents (un clic sur le nom marque toute la journée). La saisie reste sur l'appareil jusqu'à <b>Enregistrer l'appel</b> ; ensuite, chaque correction est gardée dans l'historique. Un clic sur l'en-tête d'une séance marque l'enseignant absent ; le menu ⋮ de la séance donne Tous absents, Tous présents et Modifier la séance (remplaçant, séance annulée). Pas d'appel le samedi ni le dimanche.</p>
   <figure class="duo"><img src="img/manuel/sg-appel.png" alt="Sur le site"><img class="mobile" src="img/mobile/sg-appel.png" alt="Sur l'application mobile"><figcaption>Figure 28 — La feuille d'appel · site à gauche, application mobile à droite</figcaption></figure>
   <h3>Les justifications</h3>
   <p>Menu Absences → <b>Absences</b>, affichage <b>Par élève</b> : cochez les absences d'un élève, puis <b>Justifier</b> (motif, date de réception, pièces en photo ou PDF). Une justification ne supprime jamais l'absence : elle la classe parmi les heures justifiées. L'affichage <b>Par jour</b>, les filtres et l'export Excel ou PDF servent à consulter.</p>

@@ -52,6 +52,17 @@ class _EcranAVerifierState extends State<EcranAVerifier> {
   final _deplies = <String>{};
 
   Future<void> _marquer(Map p) async {
+    // « C'est normal » retire le point de la liste : on le confirme ; le faire revenir se fait sans question.
+    if (p['ignore'] != true &&
+        !await confirmer(
+          context,
+          "C'est normal ?",
+          '${p['titre']}\n\nCe point ne sera plus signalé. Vous pourrez le revoir avec « Afficher les points jugés normaux », puis « Signaler de nouveau ».',
+          action: "Oui, c'est normal",
+        )) {
+      return;
+    }
+    if (!mounted) return;
     final ok = await agir(context, () async {
       if (p['ignore'] == true) {
         await Api.i.delete('/verifications/ignorees?cle=${Uri.encodeQueryComponent(p['cle'] as String)}');
