@@ -72,6 +72,12 @@ class _EcranBilanAbsencesState extends State<EcranBilanAbsences> {
                           : 'Sanctions (non justifiées depuis la rentrée) : ${sanctions.map((s) => '${s['libelle']} dès ${duree(s['minutes'] as int)}').join(' · ')}.',
                       style: TextStyle(color: c.encre2, fontSize: 12.5),
                     ),
+                    // Le bilan affiché (classe et période) : PDF à imprimer ou classeur Excel.
+                    if (eleves.isNotEmpty)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: MenuExporter(chemin: '/absences/bilan/export?classeId=$classeId&periode=$_periode'),
+                      ),
                   ]),
                 ),
               ),
