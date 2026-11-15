@@ -292,16 +292,39 @@ class _FicheEleveState extends State<FicheEleve> {
   String _periode = 'S1';
 
   Future<void> _photo(Map e) async {
-    final source = await showModalBottomSheet<ImageSource>(
+    final choix = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(leading: const Icon(Icons.photo_camera_outlined), title: const Text('Prendre une photo'), onTap: () => Navigator.pop(ctx, ImageSource.camera)),
-          ListTile(leading: const Icon(Icons.photo_library_outlined), title: const Text('Choisir dans la galerie'), onTap: () => Navigator.pop(ctx, ImageSource.gallery)),
+          ListTile(leading: const Icon(Icons.photo_camera_outlined), title: const Text('Prendre une photo'), onTap: () => Navigator.pop(ctx, 'camera')),
+          ListTile(leading: const Icon(Icons.photo_library_outlined), title: const Text('Choisir dans la galerie'), onTap: () => Navigator.pop(ctx, 'galerie')),
+          if (e['photoCle'] != null)
+            ListTile(
+              leading: Icon(Icons.delete_outline, color: ctx.c.danger),
+              title: Text('Supprimer la photo', style: TextStyle(color: ctx.c.danger)),
+              onTap: () => Navigator.pop(ctx, 'supprimer'),
+            ),
         ]),
       ),
     );
-    if (source == null) return;
+    if (choix == null || !mounted) return;
+    // Photo erronée : retirée après confirmation (la décision peut être désapprouvée, ce qui la remet).
+    if (choix == 'supprimer') {
+      if (!await confirmer(
+        context,
+        'Supprimer la photo ?',
+        'La photo de ${e['nom']} ${e['prenoms']} sera retirée de sa fiche, de ses bulletins et de sa carte scolaire. Sans photo, la carte ne peut pas être imprimée.',
+        action: 'Supprimer la photo',
+        danger: true,
+      )) {
+        return;
+      }
+      if (!mounted) return;
+      final ok = await agir(context, () => Api.i.delete('/eleves/${widget.id}/photo'), succes: 'Photo supprimée.');
+      if (ok) setState(() => _version++);
+      return;
+    }
+    final source = choix == 'camera' ? ImageSource.camera : ImageSource.gallery;
     final image = await ImagePicker().pickImage(source: source, maxWidth: 900, imageQuality: 85);
     if (image == null || !mounted) return;
     final ok = await agir(context, () => Api.i.televerser('/eleves/${widget.id}/photo', 'photo', File(image.path)), succes: 'Photo enregistrée.');
