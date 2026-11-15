@@ -246,6 +246,11 @@ void main() {
   ecran('sg-classes', role: sg, destination: 'classes');
   ecran('sg-nouvelle-classe', role: sg, destination: 'classes', gestes: (t) => toucher(t, find.byType(FloatingActionButton)));
   ecran('sg-groupes', role: sg, destination: 'groupes');
+  ecran('sg-a-verifier', role: sg, destination: 'a-verifier');
+  ecran('sg-fusion', role: sg, destination: 'a-verifier', gestes: (t) async {
+    await t.scrollUntilVisible(find.text('Fusionner').first, 300, scrollable: find.byType(Scrollable).first);
+    await toucher(t, find.text('Fusionner').first);
+  });
   ecran('sg-enseignants', role: sg, destination: 'enseignants');
   ecran('sg-enseignant-carriere', role: sg, destination: 'enseignants', gestes: (t) async {
     await toucher(t, find.byType(PopupMenuButton<String>));
