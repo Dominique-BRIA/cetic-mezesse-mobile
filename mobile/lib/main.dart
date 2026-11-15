@@ -31,8 +31,11 @@ void main() {
     Push.surNouveauJeton = () => unawaited(Signalement.signal());
     unawaited(Push.demarrer());
     // Nouvelle tentative d'envoi des notes en attente toutes les minutes.
+    // Et du détachement du téléphone après une déconnexion hors réseau.
+    unawaited(Signalement.envoyerOubli());
     Timer.periodic(const Duration(minutes: 1), (_) {
       if (FileAttente.i.envois.isNotEmpty) FileAttente.i.synchroniser();
+      unawaited(Signalement.envoyerOubli());
     });
     runApp(const Application());
     noter('main : interface lancée');

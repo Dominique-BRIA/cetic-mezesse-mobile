@@ -8,7 +8,6 @@ import '../format.dart';
 import '../mise_a_jour.dart';
 import '../motif.dart';
 import '../push.dart';
-import '../signalement.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'accueil.dart';
@@ -331,8 +330,7 @@ class _Tiroir extends StatelessWidget {
                   return;
                 }
                 destinationCourante.value = 'accueil';
-                // Avant de perdre la session : le téléphone ne recevra plus les notifications de ce compte.
-                await Signalement.detacher();
+                // La déconnexion détache aussi le téléphone : il ne recevra plus les notifications de ce compte.
                 await e.deconnecter();
               },
             ),

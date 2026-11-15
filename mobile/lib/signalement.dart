@@ -20,6 +20,9 @@ class Signalement {
   static final Set<String> _dejaEnvoyes = {};
   static Map<String, dynamic>? _identite;
 
+  /// Détachement noté à la déconnexion, en attente de confirmation par l'API (hors réseau, envoi interrompu).
+  static const _cleOubli = 'push:a-oublier';
+
   /// Identité du téléphone, fournie par MainActivity ; null si le canal est absent.
   static Future<Map<String, dynamic>?> _lireIdentite() async {
     try {
@@ -36,6 +39,8 @@ class Signalement {
       final identite = await _lireIdentite();
       if (identite == null) return;
       final jetonPush = await Push.jeton();
+      // Reconnecté avant que le détachement ait abouti : ce téléphone sert de nouveau, on ne le détache plus.
+      await Api.i.prefs.remove(_cleOubli);
       await Api.i.envoyer('POST', '/appareils/signal', annee: false, corps: {
         ...identite,
         'numeroVersion': numeroVersion,
@@ -48,17 +53,40 @@ class Signalement {
     }
   }
 
-  /// À la déconnexion volontaire : ce téléphone ne reçoit plus les notifications du compte.
+  /// À toute déconnexion (bouton, session expirée) : ce téléphone ne reçoit plus les notifications du compte.
+  /// Le détachement est noté d'abord, puis envoyé sans session : l'identifiant d'installation et le jeton de
+  /// notification, que seul ce téléphone connaît, suffisent. Sans jeton, le téléphone ne reçoit rien : rien à faire.
   static Future<void> detacher() async {
-    if (Api.i.jeton == null) return;
     try {
       final identite = await _lireIdentite();
-      if (identite == null) return;
-      await Api.i
-          .envoyer('POST', '/appareils/detacher', annee: false, corps: {'installationId': identite['installationId']})
-          .timeout(const Duration(seconds: 8));
+      final jetonPush = await Push.jeton();
+      if (identite == null || jetonPush == null) return;
+      await Api.i.prefs.setString(_cleOubli, jsonEncode({'installationId': identite['installationId'], 'jetonPush': jetonPush}));
     } catch (e) {
-      noter('détachement : $e');
+      noter('détachement non noté : $e');
+      return;
+    }
+    await envoyerOubli();
+  }
+
+  /// Envoie le détachement en attente ; réessayé à chaque ouverture et chaque minute tant qu'il n'a pas abouti.
+  static Future<void> envoyerOubli() async {
+    final note = Api.i.prefs.getString(_cleOubli);
+    if (note == null) return;
+    // Quelqu'un s'est reconnecté : le signal rattache le téléphone à ce compte, rien à détacher.
+    if (Api.i.jeton != null) {
+      await Api.i.prefs.remove(_cleOubli);
+      return;
+    }
+    try {
+      final r = await http
+          .post(Uri.parse('${Api.base}/appareils/oublier'), headers: {'Content-Type': 'application/json'}, body: note)
+          .timeout(const Duration(seconds: 10));
+      if (r.statusCode >= 200 && r.statusCode < 300 || r.statusCode == 400) {
+        if (Api.i.prefs.getString(_cleOubli) == note) await Api.i.prefs.remove(_cleOubli);
+      }
+    } catch (e) {
+      noter('détachement en attente : $e');
     }
   }
 

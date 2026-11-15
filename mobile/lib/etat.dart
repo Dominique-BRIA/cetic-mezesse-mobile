@@ -178,6 +178,8 @@ class Etat extends ChangeNotifier {
   }
 
   Future<void> deconnecter() async {
+    // Bouton ou session expirée : le téléphone ne recevra plus les notifications de ce compte.
+    unawaited(Signalement.detacher());
     Api.i.jeton = null;
     await Api.i.prefs.remove('jeton');
     await Api.i.prefs.remove('profil');
