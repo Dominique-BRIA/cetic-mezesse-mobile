@@ -40,6 +40,7 @@
     <tr><td>À vérifier, doublons, fusions</td><td>Direction</td><td>Administration → À vérifier</td></tr>
     <tr><td>Supprimer la photo d'un élève</td><td>Direction</td><td>Fiche de l'élève</td></tr>
     <tr><td>Notifications sur le téléphone et le navigateur</td><td>Tous</td><td>Proposées à la connexion</td></tr>
+    <tr><td>Un seul premier, non classés, délibération, bilan annuel</td><td>Direction (réglages) · tous (résultats)</td><td>Paramètres ; bulletins, notes, classement</td></tr>
   </table>
   <div class="encadre"><b>Bon à savoir.</b> Le chef d'établissement est le <b>Directeur</b>, ou la <b>Directrice</b>. Les cours ont lieu du lundi au vendredi : l'application ne propose ni cours ni appel le samedi et le dimanche.</div>
 </section>
@@ -132,7 +133,21 @@
 </section>
 
 <section class="chapitre">
-  <h2>8. Ce qu'il faut avant chaque action</h2>
+  <h2>8. Le classement et la fin d'année</h2>
+  <ul>
+    <li><b>Un seul premier.</b> Les rangs se calculent sur les moyennes arrondies au centième. Des élèves ex æquo partagent leur rang, sauf à la <b>première place</b> : elle revient à un seul élève, départagé selon les critères rangés par importance dans les Paramètres (moyenne d'un groupe de matières, comme les matières professionnelles ; discipline, c'est-à-dire le moins d'heures d'absence non justifiées de la période ; ordre alphabétique), puis par tirage au sort. Les autres ex æquo de la première place partagent le 2e rang.</li>
+    <li><b>Les matières non composées</b> (sur une séquence) : moins d'un tiers des matières évaluées composées, l'élève n'est <b>pas classé</b> (« NC ») ; entre un tiers et deux tiers, les matières manquantes valent <b>0</b> et leur coefficient compte ; plus de deux tiers, elles sont <b>ignorées</b> (note vide, coefficient non compté). Les deux seuils se règlent dans les Paramètres.</li>
+    <li><b>Le trimestre</b> se calcule sur les séquences où l'élève est classé : une seule note dans une matière devient sa note du trimestre ; non classé à une séquence et classé à l'autre, cette dernière devient son trimestre ; non classé aux deux, il n'est pas classé au trimestre.</li>
+    <li><b>L'année</b> est la moyenne des trimestres classés ; sans trimestre classé, l'élève n'est pas classé.</li>
+    <li><b>La réussite</b> : 10 de moyenne sur les séquences et les trimestres. Sur l'année, la <b>moyenne de délibération</b> (par exemple 9,00), si elle est réglée, permet le passage : « Admis(e) après délibération ».</li>
+  </ul>
+  <p>Ces règles se règlent dans Administration → <b>Paramètres</b>, carte <b>Résultats, classement et délibération</b>. Le tableau d'honneur peut aussi être refusé au-delà d'un nombre d'heures d'absence non justifiées sur la période.</p>
+  <figure><img src="img/manuel/sg-regles-resultats.png" alt="Résultats, classement et délibération"><figcaption>Figure 8 — Résultats, classement et délibération</figcaption></figure>
+  <div class="encadre"><b>Le bulletin de fin d'année.</b> Le bulletin du 3e trimestre porte le <b>bilan annuel</b> (moyenne et rang de l'année) et la <b>décision du conseil de classe</b>, calculée d'après la moyenne annuelle : « Admis(e) en classe supérieure » (10 et plus), « Admis(e) après délibération » (à partir de la moyenne de délibération) ou « Redouble ».</div>
+</section>
+
+<section class="chapitre">
+  <h2>9. Ce qu'il faut avant chaque action</h2>
   <table>
     <tr><th style="width:30%">Pour…</th><th style="width:44%">Il faut d'abord…</th><th>Où</th></tr>
     <tr><td>Saisir l'emploi du temps</td><td>La classe et ses matières, avec leur professeur</td><td>Organisation → Emploi du temps</td></tr>

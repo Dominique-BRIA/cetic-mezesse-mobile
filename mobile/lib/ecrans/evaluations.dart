@@ -133,7 +133,7 @@ Map<String, Object?> _tableauReleve(Map r, String periode) {
       for (final e in eleves)
         {
           'c': [
-            rang(e['rang'] as Map?),
+            e['nonClasse'] == true ? 'NC' : rang(e['rang'] as Map?),
             e['numero'],
             '${e['nom']} ${e['prenoms']}',
             for (var i = 0; i < matieres.length; i++) matieres[i]['evaluee'] == true ? note((e['notes'] as List)[i] as num?) : '',
@@ -175,7 +175,7 @@ class _Releve extends StatelessWidget {
           for (final e in eleves)
             ExpansionTile(
               shape: const Border(),
-              leading: SizedBox(width: 44, child: Text(rang(e['rang'] as Map?), style: TextStyle(color: context.c.encre2))),
+              leading: SizedBox(width: 44, child: Text(e['nonClasse'] == true ? 'NC' : rang(e['rang'] as Map?), style: TextStyle(color: e['nonClasse'] == true ? context.c.alerte : context.c.encre2))),
               title: Text('${e['numero'] == null ? '' : '${e['numero']}. '}${e['nom']} ${e['prenoms']}', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14.5)),
               trailing: Text(note(e['moyenne'] as num?),
                   style: TextStyle(fontWeight: FontWeight.w700, color: couleurNote(context, e['moyenne'] as num?))),

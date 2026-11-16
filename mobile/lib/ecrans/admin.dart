@@ -163,6 +163,16 @@ class _EcranParametresState extends State<EcranParametres> {
   // Sanctions pour absences non justifiées : trois paliers fixes, le SG règle à partir de combien d'heures.
   static const _paliers = [('AVERTISSEMENT', 'Avertissement conduite'), ('BLAME', 'Blâme conduite'), ('EXCLUSION', 'Exclusion')];
   final Map<String, TextEditingController> _sanctions = {for (final (l, _) in _paliers) l: TextEditingController()};
+  // Règles des résultats : délibération, refus du tableau d'honneur, matières composées, départage de la première place.
+  final _deliberation = TextEditingController();
+  final _heuresRefus = TextEditingController();
+  final _nonClasse = TextEditingController();
+  final _ignorees = TextEditingController();
+  List<Map<String, Object?>> _criteres = []; // {type, groupe, actif}, dans l'ordre choisi
+
+  static String _nombre(Object? v) => v == null ? '' : '$v'.replaceAll('.', ',');
+  static double? _lire(String t) => t.trim().isEmpty ? null : double.tryParse(t.trim().replaceAll(',', '.'));
+  static String _cle(Map c) => c['type'] == 'GROUPE' ? 'GROUPE:${'${c['groupe']}'.toLowerCase()}' : '${c['type']}';
 
   static String _heures(Object? minutes) {
     if (minutes == null) return '';
@@ -179,6 +189,32 @@ class _EcranParametresState extends State<EcranParametres> {
       _etab[k] = TextEditingController(text: e[k] == null ? '' : '${e[k]}');
     }
     _seuil.text = ((e['seuilTableauHonneur'] as num?) ?? 12).toStringAsFixed(2).replaceAll('.', ',');
+    final r = (e['reglesResultats'] as Map?) ?? {};
+    _deliberation.text = r['moyenneDeliberation'] == null ? '' : (r['moyenneDeliberation'] as num).toStringAsFixed(2).replaceAll('.', ',');
+    _heuresRefus.text = _nombre(r['heuresRefusTableauHonneur']);
+    _nonClasse.text = _nombre(r['seuilNonClasse'] ?? 33.33);
+    _ignorees.text = _nombre(r['seuilMatieresIgnorees'] ?? 66.67);
+    final groupes = (await Api.i.get('/groupes') as List).cast<Map>();
+    final noms = {for (final g in groupes) g['nom'] as String}.toList();
+    final possibles = <Map<String, Object?>>[
+      for (final n in noms) {'type': 'GROUPE', 'groupe': n},
+      {'type': 'DISCIPLINE'},
+      {'type': 'ALPHABETIQUE'},
+    ];
+    // Sans réglage : les groupes « professionnels », puis la discipline, puis l'ordre alphabétique.
+    final enregistres = ((r['criteres'] as List?) ?? []).cast<Map>();
+    final choisis = enregistres.isNotEmpty
+        ? [for (final c in enregistres) {'type': c['type'], 'groupe': c['groupe']}]
+        : [
+            ...possibles.where((c) => c['type'] == 'GROUPE' && '${c['groupe']}'.toLowerCase().contains('professionnel')),
+            {'type': 'DISCIPLINE'},
+            {'type': 'ALPHABETIQUE'},
+          ];
+    _criteres = [
+      for (final c in choisis) {...c, 'actif': true},
+      for (final p in possibles)
+        if (!choisis.any((c) => _cle(c) == _cle(p))) {...p, 'actif': false},
+    ];
     final s = (await Api.i.get('/sanctions-absences', annee: false) as List).cast<Map>();
     for (final (l, _) in _paliers) {
       _sanctions[l]!.text = _heures(s.where((x) => x['ligne'] == l).firstOrNull?['minutes']);
@@ -229,6 +265,7 @@ class _EcranParametresState extends State<EcranParametres> {
             ),
           ),
         ),
+        _reglesResultats(),
         _sanctionsAbsences(),
         Carte(
           titre: 'Établissement',
@@ -258,6 +295,101 @@ class _EcranParametresState extends State<EcranParametres> {
         _bareme('GRADE', 'Grades par matière'),
         _bareme('COTE', 'Cotes de la moyenne générale'),
       ]),
+    );
+  }
+
+  /// Règles des résultats ; le départage de la première place se range par importance (flèches) et se coche.
+  Widget _reglesResultats() {
+    String libelle(Map c) => c['type'] == 'GROUPE'
+        ? 'Moyenne du groupe « ${c['groupe']} »'
+        : c['type'] == 'DISCIPLINE'
+            ? "Discipline : le moins d'heures d'absence non justifiées"
+            : 'Ordre alphabétique des noms';
+    return StatefulBuilder(
+      builder: (context, maj) => Carte(
+        titre: 'Résultats, classement et délibération',
+        action: TextButton(
+          onPressed: () {
+            final nonClasse = _lire(_nonClasse.text);
+            final ignorees = _lire(_ignorees.text);
+            if (nonClasse == null || ignorees == null) return message(context, 'Indiquez les deux parts des matières composées.', erreur: true);
+            agir(
+              context,
+              () => Api.i.envoyer('PUT', '/etablissement/resultats', annee: false, corps: {
+                'moyenneDeliberation': _lire(_deliberation.text),
+                'heuresRefusTableauHonneur': _lire(_heuresRefus.text)?.round(),
+                'seuilNonClasse': nonClasse,
+                'seuilMatieresIgnorees': ignorees,
+                'criteres': [
+                  for (final c in _criteres.where((c) => c['actif'] == true)) {'type': c['type'], 'groupe': c['type'] == 'GROUPE' ? c['groupe'] : null},
+                ],
+              }),
+              succes: 'Règles des résultats enregistrées.',
+            );
+          },
+          child: const Text('Enregistrer'),
+        ),
+        enfant: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          TextField(
+            controller: _deliberation,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Moyenne de délibération',
+              helperText: "Sur la moyenne annuelle : à partir de cette moyenne (par exemple 9,00), l'élève passe après délibération. Vide : pas de délibération.",
+              helperMaxLines: 3,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _heuresRefus,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: "Refus du tableau d'honneur (heures)",
+              helperText: "À partir de ce nombre d'heures d'absence non justifiées sur la période. Vide : pas de limite.",
+              helperMaxLines: 2,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _nonClasse,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'Non classé en dessous de (% des matières)', helperText: '1/3 : 33,33'),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _ignorees,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Matières ignorées à partir de (% des matières)',
+              helperText: 'En dessous, les matières non composées valent 0 ; 2/3 : 66,67',
+              helperMaxLines: 2,
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Text('Départage de la première place', style: TextStyle(fontWeight: FontWeight.w700)),
+          Text(
+            "Un seul premier : en cas d'égalité, ces critères s'appliquent dans l'ordre (cochez et rangez-les). En dernier recours, un tirage au sort.",
+            style: TextStyle(color: context.c.encre2, fontSize: 12.5),
+          ),
+          for (var i = 0; i < _criteres.length; i++)
+            Row(children: [
+              Checkbox(value: _criteres[i]['actif'] == true, onChanged: (v) => maj(() => _criteres[i]['actif'] = v == true)),
+              Expanded(
+                child: Text(libelle(_criteres[i]), style: TextStyle(fontSize: 13.5, color: _criteres[i]['actif'] == true ? null : context.c.encre3)),
+              ),
+              IconButton(
+                tooltip: 'Monter',
+                icon: const Icon(Icons.arrow_upward, size: 18),
+                onPressed: i == 0 ? null : () => maj(() => _criteres.insert(i - 1, _criteres.removeAt(i))),
+              ),
+              IconButton(
+                tooltip: 'Descendre',
+                icon: const Icon(Icons.arrow_downward, size: 18),
+                onPressed: i == _criteres.length - 1 ? null : () => maj(() => _criteres.insert(i + 1, _criteres.removeAt(i))),
+              ),
+            ]),
+        ]),
+      ),
     );
   }
 
