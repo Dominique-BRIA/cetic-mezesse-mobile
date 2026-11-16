@@ -370,15 +370,18 @@ class Choix<T> extends StatelessWidget {
 }
 
 class ChoixPeriode extends StatelessWidget {
-  const ChoixPeriode({super.key, required this.valeur, required this.changer});
+  const ChoixPeriode({super.key, required this.valeur, required this.changer, this.sansAnnee = false});
   final String valeur;
   final ValueChanged<String> changer;
+
+  /// Sans « Année complète » (bulletins : celui du 3e trimestre porte le bilan annuel).
+  final bool sansAnnee;
 
   @override
   Widget build(BuildContext context) => Choix<String>(
         libelle: 'Période',
         valeur: valeur,
-        options: [for (final p in periodes) (p.$1, p.$2)],
+        options: [for (final p in periodes) if (!sansAnnee || p.$1 != 'A') (p.$1, p.$2)],
         changer: (v) => changer(v!),
       );
 }

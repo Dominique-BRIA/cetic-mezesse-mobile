@@ -244,7 +244,7 @@ class _EcranBulletinsState extends State<EcranBulletins> {
             const SizedBox(height: 8),
             Carte(
               enfant: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                ChoixPeriode(valeur: _periode, changer: (v) => setState(() => _periode = v)),
+                ChoixPeriode(valeur: _periode, changer: (v) => setState(() => _periode = v), sansAnnee: true),
                 const SizedBox(height: 10),
                 ChoixSelection(selection: _selection, classes: classes, changer: setState),
               ]),

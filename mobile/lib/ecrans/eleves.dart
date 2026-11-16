@@ -436,7 +436,7 @@ class _FicheEleveState extends State<FicheEleve> {
               Carte(
                 titre: 'Documents',
                 enfant: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  ChoixPeriode(valeur: _periode, changer: (v) => setState(() => _periode = v)),
+                  ChoixPeriode(valeur: _periode, changer: (v) => setState(() => _periode = v), sansAnnee: true),
                   const SizedBox(height: 10),
                   FilledButton.icon(
                     icon: const Icon(Icons.picture_as_pdf_outlined),
