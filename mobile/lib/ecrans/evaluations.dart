@@ -117,7 +117,11 @@ class _EcranNotesState extends State<EcranNotes> {
 Map<String, Object?> _tableauReleve(Map r, String periode) {
   final matieres = (r['matieres'] as List).cast<Map>();
   final eleves = (r['eleves'] as List).cast<Map>().toList()
-    ..sort((a, b) => ((a['rang']?['rang'] as int?) ?? 999).compareTo((b['rang']?['rang'] as int?) ?? 999));
+    ..sort((a, b) {
+        final r = ((a['rang']?['rang'] as int?) ?? 999).compareTo((b['rang']?['rang'] as int?) ?? 999);
+        // Dans un groupe d'ex æquo, l'élève désigné (rang sans « ex », comme sur le bulletin) passe devant.
+        return r != 0 ? r : (a['rang']?['exAequo'] == true ? 1 : 0).compareTo(b['rang']?['exAequo'] == true ? 1 : 0);
+      });
   final profil = r['profil'] as Map;
   return {
     'titre': 'Relevé de notes · ${r['classe']['nom']} · ${libellePeriode(periode)}',
@@ -160,7 +164,11 @@ class _Releve extends StatelessWidget {
   Widget build(BuildContext context) {
     final matieres = (r['matieres'] as List).cast<Map>();
     final eleves = (r['eleves'] as List).cast<Map>()
-      ..sort((a, b) => ((a['rang']?['rang'] as int?) ?? 999).compareTo((b['rang']?['rang'] as int?) ?? 999));
+      ..sort((a, b) {
+        final r = ((a['rang']?['rang'] as int?) ?? 999).compareTo((b['rang']?['rang'] as int?) ?? 999);
+        // Dans un groupe d'ex æquo, l'élève désigné (rang sans « ex », comme sur le bulletin) passe devant.
+        return r != 0 ? r : (a['rang']?['exAequo'] == true ? 1 : 0).compareTo(b['rang']?['exAequo'] == true ? 1 : 0);
+      });
     final profil = r['profil'] as Map;
     return Defilement(rafraichir: recharger, enfants: [
       GrilleIndicateurs(enfants: [
