@@ -366,9 +366,9 @@ class _EcranParametresState extends State<EcranParametres> {
             ),
           ),
           const SizedBox(height: 14),
-          const Text('Départage de la première place', style: TextStyle(fontWeight: FontWeight.w700)),
+          const Text('Élève désigné parmi les ex æquo', style: TextStyle(fontWeight: FontWeight.w700)),
           Text(
-            "Un seul premier : en cas d'égalité, ces critères s'appliquent dans l'ordre (cochez et rangez-les). En dernier recours, un tirage au sort.",
+            "Les rangs gardent leurs ex æquo. Parmi des ex æquo, à n'importe quel rang, ces critères, dans l'ordre (cochez et rangez-les), désignent celui qui porte son rang sans « ex » (par exemple « 1er » ou « 5e ») sur son bulletin et devant les autres ex æquo au tableau d'honneur. En dernier recours, un tirage au sort.",
             style: TextStyle(color: context.c.encre2, fontSize: 12.5),
           ),
           for (var i = 0; i < _criteres.length; i++)
